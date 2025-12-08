@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Caolorias</string>
+    <string name="title_activity_main">Caolorias</string>
+    <string name="package_name">com.caolorias.app</string>
+    <string name="custom_url_scheme">com.caolorias.app</string>
+</resources>
