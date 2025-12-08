@@ -1,4 +1,6 @@
-# Welcome to your Lovable project
+# Cãolorias
+
+App de gestão de calorias para cães - Desenvolvido com React, Vite, TypeScript e Capacitor.
 
 ## Project info
 
@@ -106,4 +108,47 @@ Este projeto usa Vite; o build web é gerado na pasta `dist` (script `npm run bu
 
 6. No Android Studio, selecione um emulador ou dispositivo e clique em "Run" para testar. Para publicar, use "Generate Signed Bundle / APK" para criar o `.aab`.
 
-Para iOS, o fluxo é semelhante usando `npx cap add ios` e `npx cap open ios`.
+Para iOS, o fluxo é semelhante usando `npm run cap:add:ios` e `npm run cap:open:ios`.
+
+## Publicando no GitHub
+
+Este projeto já está configurado como um repositório Git. Para publicá-lo no GitHub:
+
+1. **Criar um novo repositório no GitHub:**
+   - Acesse [github.com](https://github.com) e faça login
+   - Clique em "New repository" (ou "Novo repositório")
+   - Escolha um nome (ex: `caolorias`)
+   - **NÃO** inicialize com README, .gitignore ou licença (já temos isso)
+   - Clique em "Create repository"
+
+2. **Conectar o repositório local ao GitHub:**
+   ```bash
+   # Adicione o repositório remoto (substitua SEU_USUARIO pelo seu username do GitHub)
+   git remote add origin https://github.com/SEU_USUARIO/caolorias.git
+   
+   # Ou se preferir usar SSH:
+   # git remote add origin git@github.com:SEU_USUARIO/caolorias.git
+   ```
+
+3. **Enviar o código para o GitHub:**
+   ```bash
+   # Renomeie a branch para 'main' se necessário
+   git branch -M main
+   
+   # Envie o código
+   git push -u origin main
+   ```
+
+4. **Próximos commits:**
+   Após fazer alterações, use:
+   ```bash
+   git add .
+   git commit -m "Descrição das alterações"
+   git push
+   ```
+
+**Dica:** Se você ainda não configurou seu nome e email no Git, faça isso antes do primeiro commit:
+```bash
+git config --global user.name "Seu Nome"
+git config --global user.email "seu.email@example.com"
+```
