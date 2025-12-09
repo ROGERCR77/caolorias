@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dog, Food, Meal, WeightLog, MealPlan, BreedReference, ActivityReference, DogPorte, NivelAtividade } from "@/contexts/DataContext";
+import { Dog, Food, Meal, WeightLog, MealPlan, BreedReference, ActivityReference } from "@/contexts/DataContext";
 import { subDays, parseISO, isWithinInterval, startOfDay, isToday } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,6 +19,21 @@ export interface AIActivityRecommendation {
   minutos_min: number | null;
   minutos_max: number | null;
   mensagem: string;
+  atividade_real_semana?: number | null;
+}
+
+export interface AIHealthAlert {
+  tem_alerta: boolean;
+  tipo: "digestivo" | "sintomas" | "energia" | "vacinas" | null;
+  mensagem: string | null;
+}
+
+export interface AIWeeklySummary {
+  percentual_meta_atingido: number;
+  dias_com_registro: number;
+  tendencia_peso: "subindo" | "estavel" | "descendo" | "sem_dados";
+  saude_digestiva: "ok" | "atencao" | "alerta";
+  mensagem_motivacional: string;
 }
 
 export interface AIMealPlanSuggestion {
@@ -40,7 +55,32 @@ export interface AIResponse {
   insights: AIInsight[];
   comentario_peso_raca: AIWeightComment;
   recomendacao_atividade: AIActivityRecommendation;
+  alerta_saude?: AIHealthAlert;
   plano_alimentar_sugerido: AIMealPlanSuggestion;
+  resumo_semanal?: AIWeeklySummary;
+}
+
+async function fetchHealthData(dogId: string, userId: string) {
+  const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+  const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+
+  const [poopRes, symptomsRes, energyRes, activityRes, intolerancesRes, healthRecordsRes] = await Promise.all([
+    supabase.from('poop_logs').select('*').eq('dog_id', dogId).gte('logged_at', sevenDaysAgo),
+    supabase.from('health_symptoms').select('*').eq('dog_id', dogId).gte('logged_at', sevenDaysAgo),
+    supabase.from('energy_logs').select('*').eq('dog_id', dogId).gte('logged_at', sevenDaysAgo),
+    supabase.from('activity_logs').select('*').eq('dog_id', dogId).gte('logged_at', thirtyDaysAgo),
+    supabase.from('food_intolerances').select('*').eq('dog_id', dogId),
+    supabase.from('health_records').select('*').eq('dog_id', dogId),
+  ]);
+
+  return {
+    poop_logs: poopRes.data || [],
+    health_symptoms: symptomsRes.data || [],
+    energy_logs: energyRes.data || [],
+    activity_logs: activityRes.data || [],
+    food_intolerances: intolerancesRes.data || [],
+    health_records: healthRecordsRes.data || [],
+  };
 }
 
 function prepareAIData(
@@ -52,7 +92,8 @@ function prepareAIData(
   tutorName: string,
   modo: "insights" | "plano_alimentar" | "resumo_completo",
   breedRef?: BreedReference,
-  activityRef?: ActivityReference
+  activityRef?: ActivityReference,
+  healthData?: any
 ) {
   const today = new Date();
   const sevenDaysAgo = subDays(today, 7);
@@ -144,13 +185,18 @@ function prepareAIData(
     })),
   } : { existe: false, numero_refeicoes_dia: null, meta_gramas_dia: null, percentual_proteina: null, percentual_carbo: null, percentual_vegetais: null, itens: [] };
 
+  // Calculate activity total
+  const activityTotalMinutes = healthData?.activity_logs?.reduce(
+    (sum: number, a: any) => sum + (a.duration_minutes || 0), 0
+  ) || 0;
+
   return {
     modo,
     tutor: { nome: tutorName },
     cao: {
       nome: dog.name,
       raca: dog.breed || null,
-      porte: dog.size === "small" ? "pequeno" : dog.size === "medium" ? "medio" : dog.size === "large" ? "grande" : null,
+      porte: dog.size === "small" ? "pequeno" : dog.size === "medium" ? "medio" : dog.size === "large" ? "grande" : dog.size === "giant" ? "gigante" : null,
       peso_atual_kg: currentWeight,
       objetivo: dog.objetivo === "manter_peso" ? "manter" 
         : dog.objetivo === "perder_peso" ? "perder"
@@ -179,11 +225,15 @@ function prepareAIData(
         media_gramas: avgGrams,
         dias_acima_110_meta: daysAbove110,
         dias_abaixo_90_meta: daysBelow90,
-        percentual_kcal_petiscos: null, // Would need more calculation
+        percentual_kcal_petiscos: null,
       },
       peso: {
         peso_atual_kg: currentWeight,
         peso_30_dias_atras_kg: weight30DaysAgo,
+      },
+      atividade_semana: {
+        total_minutos: activityTotalMinutes,
+        total_sessoes: healthData?.activity_logs?.length || 0,
       },
     },
     alimentos: alimentosList,
@@ -200,6 +250,34 @@ function prepareAIData(
         max_minutos_dia: activityRef.minutos_max_dia,
       } : { disponivel: false, min_minutos_dia: null, max_minutos_dia: null },
     },
+    // New health data
+    poop_logs: healthData?.poop_logs?.map((p: any) => ({
+      data: p.logged_at,
+      textura: p.texture,
+      cor: p.color,
+      tem_muco: p.has_mucus,
+      tem_sangue: p.has_blood,
+    })) || [],
+    health_symptoms: healthData?.health_symptoms?.map((s: any) => ({
+      data: s.logged_at,
+      sintomas: s.symptoms,
+      severidade: s.severity,
+    })) || [],
+    energy_logs: healthData?.energy_logs?.map((e: any) => ({
+      data: e.logged_at,
+      nivel: e.energy_level,
+    })) || [],
+    food_intolerances: healthData?.food_intolerances?.map((i: any) => ({
+      alimento: i.food_name || foods.find(f => f.id === i.food_id)?.name,
+      tipo_reacao: i.reaction_type,
+      sintomas: i.symptoms,
+    })) || [],
+    health_records: healthData?.health_records?.map((r: any) => ({
+      tipo: r.type,
+      nome: r.name,
+      aplicado_em: r.applied_at,
+      proxima_aplicacao: r.next_due_at,
+    })) || [],
   };
 }
 
@@ -217,13 +295,20 @@ export function useAIInsights() {
     tutorName: string,
     modo: "insights" | "plano_alimentar" | "resumo_completo" = "resumo_completo",
     breedRef?: BreedReference,
-    activityRef?: ActivityReference
+    activityRef?: ActivityReference,
+    userId?: string
   ) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const data = prepareAIData(dog, meals, weightLogs, foods, activePlan, tutorName, modo, breedRef, activityRef);
+      // Fetch health data if userId is available
+      let healthData = null;
+      if (userId) {
+        healthData = await fetchHealthData(dog.id, userId);
+      }
+
+      const data = prepareAIData(dog, meals, weightLogs, foods, activePlan, tutorName, modo, breedRef, activityRef, healthData);
 
       const { data: result, error: funcError } = await supabase.functions.invoke('ai-insights', {
         body: { data, modo },
