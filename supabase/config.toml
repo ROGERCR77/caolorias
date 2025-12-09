@@ -3,11 +3,5 @@ project_id = "tcriouzorxknubqqnvyj"
 [functions.ai-insights]
 verify_jwt = false
 
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.check-subscription]
-verify_jwt = false
-
-[functions.customer-portal]
+[functions.validate-iap-receipt]
 verify_jwt = false
