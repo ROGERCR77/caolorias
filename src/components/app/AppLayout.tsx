@@ -31,16 +31,16 @@ const navItems = [
 ];
 
 const moreNavItems = [
-  { path: "/app/peso-progresso", label: "Peso & Progresso", icon: Scale },
-  { path: "/app/alimentos", label: "Alimentos", icon: Apple },
-  { path: "/app/racas", label: "Raças", icon: BookOpen },
-  { path: "/app/plano-alimentar", label: "Plano Alimentar", icon: ClipboardList },
-  { path: "/app/carteira-saude", label: "Carteira de Saúde", icon: Syringe },
-  { path: "/app/atividade", label: "Atividade Física", icon: Activity },
-  { path: "/app/transicao", label: "Transição Alimentar", icon: Leaf },
-  { path: "/app/relatorio-vet", label: "Relatório Vet", icon: FileText },
-  { path: "/app/receitas", label: "Receitas", icon: ChefHat },
-  { path: "/app/historico-insights", label: "Histórico IA", icon: History },
+  { path: "/app/peso-progresso", label: "Peso & Progresso", icon: Scale, premium: false },
+  { path: "/app/alimentos", label: "Alimentos", icon: Apple, premium: false },
+  { path: "/app/racas", label: "Raças", icon: BookOpen, premium: false },
+  { path: "/app/plano-alimentar", label: "Plano Alimentar", icon: ClipboardList, premium: true },
+  { path: "/app/carteira-saude", label: "Carteira de Saúde", icon: Syringe, premium: true },
+  { path: "/app/atividade", label: "Atividade Física", icon: Activity, premium: false },
+  { path: "/app/transicao", label: "Transição Alimentar", icon: Leaf, premium: true },
+  { path: "/app/relatorio-vet", label: "Relatório Vet", icon: FileText, premium: true },
+  { path: "/app/receitas", label: "Receitas", icon: ChefHat, premium: true },
+  { path: "/app/historico-insights", label: "Histórico IA", icon: History, premium: true },
 ];
 
 const quickActions = [
@@ -276,12 +276,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                       key={item.path}
                       onClick={() => handleMoreNavClick(item.path)}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all duration-200 press-effect",
+                        "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all duration-200 press-effect relative",
                         isActive 
                           ? "bg-primary/15 border-2 border-primary shadow-sm" 
                           : "bg-muted/40 border-2 border-transparent hover:bg-muted/60"
                       )}
                     >
+                      {item.premium && (
+                        <Crown className="absolute top-2 right-2 w-3.5 h-3.5 text-warning" />
+                      )}
                       <div className={cn(
                         "p-2 rounded-xl",
                         isActive ? "bg-primary/20" : "bg-background/60"

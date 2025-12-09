@@ -202,6 +202,12 @@ const Dogs = () => {
                       <span className="font-medium">{dog.current_weight_kg} kg</span>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sexo</span>
+                      <span className="font-medium">
+                        {dog.sex === 'femea' ? '♀ Fêmea' : '♂ Macho'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Porte</span>
                       <span className="font-medium">{sizeLabels[dog.size]}</span>
                     </div>

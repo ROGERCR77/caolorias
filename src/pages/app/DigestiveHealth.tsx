@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -367,7 +368,7 @@ export default function DigestiveHealth() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4 pb-24 px-4 py-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -418,6 +419,9 @@ export default function DigestiveHealth() {
               <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Registrar Cocô de {selectedDog?.name}</DialogTitle>
+                  <DialogDescription>
+                    Registre textura, cor e outras características
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   {/* Texture */}
@@ -544,6 +548,9 @@ export default function DigestiveHealth() {
               <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Registrar Sintomas de {selectedDog?.name}</DialogTitle>
+                  <DialogDescription>
+                    Selecione os sintomas observados e a gravidade
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   {/* Symptoms */}
@@ -666,6 +673,9 @@ export default function DigestiveHealth() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Como está {selectedDog?.name} hoje?</DialogTitle>
+                  <DialogDescription>
+                    Registre o nível de energia do seu cão
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   {/* Energy Level */}
