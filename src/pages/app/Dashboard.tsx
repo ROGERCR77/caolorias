@@ -74,18 +74,21 @@ const Dashboard = () => {
   if (dogs.length === 0) {
     return (
       <AppLayout>
-        <div className="container px-4 py-12">
-          <div className="max-w-sm mx-auto text-center space-y-6">
-            <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-hero flex items-center justify-center shadow-lg animate-float">
-              <Dog className="w-12 h-12 text-primary-foreground" />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          <div className="max-w-sm w-full text-center space-y-8">
+            {/* App Icon - Like reference */}
+            <div className="w-28 h-28 mx-auto rounded-[28px] bg-gradient-hero flex items-center justify-center shadow-xl animate-float">
+              <Dog className="w-14 h-14 text-primary-foreground" strokeWidth={1.5} />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Bem-vindo ao Cãolorias!</h2>
-              <p className="text-muted-foreground">
+            
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold text-foreground">Bem-vindo ao Cãolorias!</h2>
+              <p className="text-muted-foreground text-base">
                 Você ainda não cadastrou nenhum cão. Vamos começar?
               </p>
             </div>
-            <Button asChild variant="hero" size="lg" className="w-full">
+            
+            <Button asChild variant="hero" size="lg" className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg">
               <Link to="/app/caes">
                 <Plus className="w-5 h-5" />
                 Cadastrar meu primeiro cão

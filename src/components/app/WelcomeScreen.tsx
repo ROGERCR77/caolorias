@@ -6,24 +6,27 @@ export const WelcomeScreen = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
-      <div className="flex flex-col items-center gap-8 max-w-sm w-full text-center">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-            <Dog className="w-12 h-12 text-primary" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 pt-[var(--safe-area-inset-top)] pb-[var(--safe-area-inset-bottom)]">
+      <div className="flex flex-col items-center gap-10 max-w-sm w-full text-center">
+        {/* Logo - App Icon Style */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-28 h-28 rounded-[28px] bg-gradient-hero flex items-center justify-center shadow-xl">
+            <Dog className="w-14 h-14 text-primary-foreground" strokeWidth={1.5} />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Cãolorias</h1>
-          <p className="text-muted-foreground">
-            O diário alimentar do seu cão
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-foreground">Cãolorias</h1>
+            <p className="text-muted-foreground text-base">
+              O diário alimentar do seu cão
+            </p>
+          </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col gap-3 w-full mt-8">
+        <div className="flex flex-col gap-4 w-full">
           <Button 
             size="lg" 
-            className="w-full h-14 text-lg"
+            variant="hero"
+            className="w-full h-14 text-lg font-semibold rounded-2xl shadow-lg"
             onClick={() => navigate("/login")}
           >
             Entrar
@@ -31,7 +34,7 @@ export const WelcomeScreen = () => {
           <Button 
             size="lg" 
             variant="outline" 
-            className="w-full h-14 text-lg"
+            className="w-full h-14 text-lg font-semibold rounded-2xl border-2"
             onClick={() => navigate("/cadastro")}
           >
             Criar conta
@@ -39,7 +42,7 @@ export const WelcomeScreen = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-muted-foreground mt-8">
+        <p className="text-sm text-muted-foreground">
           Organize a alimentação natural do seu amigo de quatro patas
         </p>
       </div>
