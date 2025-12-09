@@ -28,6 +28,8 @@ import Profile from "./pages/app/Profile";
 import Recipes from "./pages/app/Recipes";
 import InsightsHistory from "./pages/app/InsightsHistory";
 import DigestiveHealth from "./pages/app/DigestiveHealth";
+import HealthWallet from "./pages/app/HealthWallet";
+import Activity from "./pages/app/Activity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +66,8 @@ const App = () => (
                   <Route path="/app/receitas" element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
                   <Route path="/app/historico-insights" element={<ProtectedRoute><InsightsHistory /></ProtectedRoute>} />
                   <Route path="/app/saude-digestiva" element={<ProtectedRoute><DigestiveHealth /></ProtectedRoute>} />
+                  <Route path="/app/carteira-saude" element={<ProtectedRoute><HealthWallet /></ProtectedRoute>} />
+                  <Route path="/app/atividade" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
 
                   {/* Redirect /app to /app/hoje */}
                   <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
