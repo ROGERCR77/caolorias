@@ -1,28 +1,39 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Hero } from "@/components/landing/Hero";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Benefits } from "@/components/landing/Benefits";
-import { CTA } from "@/components/landing/CTA";
-import { Footer } from "@/components/landing/Footer";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { WelcomeScreen } from "@/components/app/WelcomeScreen";
 import { Helmet } from "react-helmet-async";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate("/app/hoje", { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return null; // Will redirect
+  }
+
   return (
     <>
       <Helmet>
         <title>Cãolorias - O diário alimentar do seu cão</title>
-        <meta name="description" content="Registre as refeições, acompanhe o peso e cuide melhor da alimentação natural do seu amigo de quatro patas. Simples, sem complicação." />
+        <meta name="description" content="Registre as refeições, acompanhe o peso e cuide melhor da alimentação natural do seu amigo de quatro patas." />
       </Helmet>
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">
-          <Hero />
-          <HowItWorks />
-          <Benefits />
-          <CTA />
-        </main>
-        <Footer />
-      </div>
+      <WelcomeScreen />
     </>
   );
 };

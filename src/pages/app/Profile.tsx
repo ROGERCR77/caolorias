@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, User, Mail, Save } from "lucide-react";
+import { ReminderSection } from "@/components/app/ReminderSection";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -26,7 +27,6 @@ const Profile = () => {
 
       if (error) throw error;
 
-      // Update profiles table
       await supabase
         .from("profiles")
         .update({ name })
@@ -52,7 +52,7 @@ const Profile = () => {
       <div className="container px-4 py-6 space-y-6 max-w-lg">
         <div>
           <h1 className="text-2xl font-bold">Meu Perfil</h1>
-          <p className="text-muted-foreground">Gerencie suas informações pessoais</p>
+          <p className="text-muted-foreground">Gerencie suas informações e lembretes</p>
         </div>
 
         {/* Profile Info */}
@@ -106,6 +106,9 @@ const Profile = () => {
             </form>
           </CardContent>
         </Card>
+
+        {/* Reminders Section */}
+        <ReminderSection />
 
         {/* Account Info */}
         <Card>
