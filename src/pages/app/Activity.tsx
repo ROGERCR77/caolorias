@@ -20,6 +20,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -263,6 +264,9 @@ export default function Activity() {
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nova Atividade</DialogTitle>
+              <DialogDescription>
+                Registre a atividade física de {selectedDog?.name}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {/* Type */}

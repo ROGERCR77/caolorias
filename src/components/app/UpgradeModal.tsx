@@ -19,12 +19,16 @@ const FEATURE_NAMES: Record<string, string> = {
   multiple_dogs: "Múltiplos cães",
   weight_history: "Histórico de peso",
   ai_insights: "Insights de IA",
+  ai_insights_history: "Histórico de Insights IA",
   meal_plan: "Plano alimentar",
   favorites: "Refeições favoritas",
   recipes: "Receitas",
   advanced_alerts: "Alertas avançados",
   activity_recommendations: "Recomendações de atividade",
   pdf_export: "Exportar PDF",
+  vet_report: "Relatório Veterinário",
+  health_wallet: "Carteira de Saúde",
+  dietary_transition: "Transição Alimentar",
   all_objectives: "Todos os objetivos",
 };
 
