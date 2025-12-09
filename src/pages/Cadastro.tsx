@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dog, ArrowLeft, Loader2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ const Cadastro = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,6 +26,15 @@ const Cadastro = () => {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!acceptedTerms) {
+      toast({
+        title: "Termos obrigatórios",
+        description: "Você precisa aceitar os termos de uso e política de privacidade.",
         variant: "destructive",
       });
       return;
@@ -60,18 +71,13 @@ const Cadastro = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary-light via-background to-accent-light">
-      {/* Header */}
       <header className="p-4">
-        <Link 
-          to="/" 
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Voltar
         </Link>
       </header>
 
-      {/* Main content */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md space-y-6">
           <Card variant="elevated" className="animate-scale-in">
@@ -80,81 +86,52 @@ const Cadastro = () => {
                 <Dog className="w-8 h-8 text-primary-foreground" />
               </div>
               <CardTitle className="text-2xl">Criar conta no Cãolorias</CardTitle>
-              <CardDescription>
-                Comece a organizar a alimentação do seu cão
-              </CardDescription>
+              <CardDescription>Comece a organizar a alimentação do seu cão</CardDescription>
             </CardHeader>
             
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Seu nome</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Como podemos te chamar?"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={isLoading}
-                  />
+                  <Input id="name" type="text" placeholder="Como podemos te chamar?" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
+                  <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
+                  <Input id="password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
                 </div>
 
-                <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Criando conta...
-                    </>
-                  ) : (
-                    "Criar minha conta grátis"
-                  )}
+                <div className="flex items-start space-x-2">
+                  <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(checked) => setAcceptedTerms(checked === true)} disabled={isLoading} />
+                  <label htmlFor="terms" className="text-sm text-muted-foreground leading-tight cursor-pointer">
+                    Li e concordo com os{" "}
+                    <Link to="/termos" className="text-primary hover:underline" target="_blank">Termos de Uso</Link>
+                    {" "}e a{" "}
+                    <Link to="/privacidade" className="text-primary hover:underline" target="_blank">Política de Privacidade</Link>
+                  </label>
+                </div>
+
+                <Button type="submit" variant="hero" className="w-full" size="lg" disabled={isLoading || !acceptedTerms}>
+                  {isLoading ? (<><Loader2 className="w-4 h-4 animate-spin" />Criando conta...</>) : "Criar minha conta grátis"}
                 </Button>
               </form>
 
               <div className="mt-6 text-center text-sm text-muted-foreground">
                 Já tem uma conta?{" "}
-                <Link to="/login" className="text-primary font-semibold hover:underline">
-                  Entrar
-                </Link>
+                <Link to="/login" className="text-primary font-semibold hover:underline">Entrar</Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* Benefits reminder */}
           <div className="space-y-3 px-2">
-            {[
-              "Cadastro rápido e 100% gratuito",
-              "Registre refeições e petiscos",
-              "Acompanhe o peso do seu cão",
-            ].map((benefit) => (
+            {["Cadastro rápido e 100% gratuito", "Registre refeições e petiscos", "Acompanhe o peso do seu cão"].map((benefit) => (
               <div key={benefit} className="flex items-center gap-3 text-sm text-muted-foreground">
-                <div className="p-1 rounded-full bg-success/20">
-                  <Check className="w-3 h-3 text-success" />
-                </div>
+                <div className="p-1 rounded-full bg-success/20"><Check className="w-3 h-3 text-success" /></div>
                 {benefit}
               </div>
             ))}

@@ -6,12 +6,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Pages
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Advertising from "./pages/Advertising";
 import Dashboard from "./pages/app/Dashboard";
 import Dogs from "./pages/app/Dogs";
 import Foods from "./pages/app/Foods";
@@ -19,6 +23,10 @@ import Meals from "./pages/app/Meals";
 import WeightProgress from "./pages/app/WeightProgress";
 import MealPlan from "./pages/app/MealPlan";
 import Breeds from "./pages/app/Breeds";
+import Subscription from "./pages/app/Subscription";
+import Profile from "./pages/app/Profile";
+import Recipes from "./pages/app/Recipes";
+import InsightsHistory from "./pages/app/InsightsHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,84 +35,44 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <DataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/cadastro" element={<Cadastro />} />
+        <SubscriptionProvider>
+          <DataProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/cadastro" element={<Cadastro />} />
+                  <Route path="/termos" element={<Terms />} />
+                  <Route path="/privacidade" element={<Privacy />} />
+                  <Route path="/publicidade" element={<Advertising />} />
 
-                {/* Protected app routes */}
-                <Route
-                  path="/app/hoje"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/caes"
-                  element={
-                    <ProtectedRoute>
-                      <Dogs />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/alimentos"
-                  element={
-                    <ProtectedRoute>
-                      <Foods />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/refeicoes"
-                  element={
-                    <ProtectedRoute>
-                      <Meals />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/peso-progresso"
-                  element={
-                    <ProtectedRoute>
-                      <WeightProgress />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/plano-alimentar"
-                  element={
-                    <ProtectedRoute>
-                      <MealPlan />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/racas"
-                  element={
-                    <ProtectedRoute>
-                      <Breeds />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Protected app routes */}
+                  <Route path="/app/hoje" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/app/caes" element={<ProtectedRoute><Dogs /></ProtectedRoute>} />
+                  <Route path="/app/alimentos" element={<ProtectedRoute><Foods /></ProtectedRoute>} />
+                  <Route path="/app/refeicoes" element={<ProtectedRoute><Meals /></ProtectedRoute>} />
+                  <Route path="/app/peso-progresso" element={<ProtectedRoute><WeightProgress /></ProtectedRoute>} />
+                  <Route path="/app/plano-alimentar" element={<ProtectedRoute><MealPlan /></ProtectedRoute>} />
+                  <Route path="/app/racas" element={<ProtectedRoute><Breeds /></ProtectedRoute>} />
+                  <Route path="/app/assinatura" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+                  <Route path="/app/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/app/receitas" element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
+                  <Route path="/app/historico-insights" element={<ProtectedRoute><InsightsHistory /></ProtectedRoute>} />
 
-                {/* Redirect /app to /app/hoje */}
-                <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
+                  {/* Redirect /app to /app/hoje */}
+                  <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
 
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </DataProvider>
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </DataProvider>
+        </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>
   </HelmetProvider>
