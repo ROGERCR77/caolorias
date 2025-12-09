@@ -6,8 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, X } from "lucide-react";
+import { Check, Crown, X, Smartphone } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -55,11 +55,11 @@ const PREMIUM_FEATURES = [
 ];
 
 export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps) {
-  const { openCheckout } = useSubscription();
+  const navigate = useNavigate();
 
-  const handleUpgrade = async () => {
+  const handleGoToSubscription = () => {
     onOpenChange(false);
-    await openCheckout();
+    navigate("/app/assinatura");
   };
 
   return (
@@ -68,16 +68,22 @@ export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-warning" />
-            Desbloqueie o Cãolorias Premium
+            Recurso Premium
           </DialogTitle>
           <DialogDescription>
             {feature && FEATURE_NAMES[feature] 
-              ? `Para usar "${FEATURE_NAMES[feature]}", você precisa do plano Premium.`
-              : "Acesse todos os recursos para cuidar melhor do seu cão."}
+              ? `"${FEATURE_NAMES[feature]}" é exclusivo para assinantes Premium.`
+              : "Este recurso é exclusivo para assinantes Premium."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          <div className="p-4 rounded-lg bg-muted/50 border">
+            <p className="text-sm text-center">
+              Acesse a tela de Assinatura para ativar seu plano Premium e desbloquear todos os recursos.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             {/* Free Plan */}
             <div className="border rounded-lg p-4">
@@ -121,9 +127,9 @@ export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps)
             </div>
           </div>
 
-          <Button onClick={handleUpgrade} className="w-full" size="lg">
-            <Crown className="w-4 h-4 mr-2" />
-            Assinar Premium por R$ 39,90/mês
+          <Button onClick={handleGoToSubscription} className="w-full" size="lg">
+            <Smartphone className="w-4 h-4 mr-2" />
+            Ir para Assinatura
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">

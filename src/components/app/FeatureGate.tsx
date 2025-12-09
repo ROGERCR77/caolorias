@@ -1,7 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { UpgradeModal } from "./UpgradeModal";
-import { useState } from "react";
 
 interface FeatureGateProps {
   feature: string;
@@ -61,7 +60,7 @@ export function FeatureGateButton({
   onClick,
   className,
 }: FeatureGateButtonProps) {
-  const { canAccessFeature, isPremium } = useSubscription();
+  const { canAccessFeature } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   const handleClick = () => {
