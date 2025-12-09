@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { format, parseISO, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Loader2, Plus, Trash2, Syringe, Bug, Calendar, 
-  AlertTriangle, CheckCircle2, Camera, Image
+  AlertTriangle, CheckCircle2, Camera, Image, Crown
 } from "lucide-react";
 import {
   Dialog,
@@ -30,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
 
 interface HealthRecord {
   id: string;
@@ -65,9 +67,11 @@ const COMMON_ANTIPULGAS = [
 export default function HealthWallet() {
   const { user } = useAuth();
   const { selectedDogId, dogs, isLoading: dataLoading } = useData();
+  const { isPremium, canAccessFeature } = useSubscription();
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   
   // Form state
   const [recordType, setRecordType] = useState('vacina');
@@ -79,6 +83,30 @@ export default function HealthWallet() {
   const [uploading, setUploading] = useState(false);
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
+
+  // Check premium access
+  if (!isPremium) {
+    return (
+      <AppLayout>
+        <div className="container px-4 py-6">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Crown className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Carteira de Saúde</h1>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Registre vacinas, vermífugos e antipulgas com lembretes automáticos. Recurso exclusivo do plano Premium.
+            </p>
+            <Button onClick={() => setShowUpgrade(true)} variant="hero">
+              <Crown className="w-4 h-4 mr-2" />
+              Assinar Premium
+            </Button>
+            <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} feature="health_wallet" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   // Fetch records
   useEffect(() => {

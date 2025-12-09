@@ -79,6 +79,30 @@ export default function DietaryTransition() {
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
 
+  // Premium gate
+  if (!isPremium && !isLoading && !dataLoading) {
+    return (
+      <AppLayout>
+        <div className="container px-4 py-6">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Crown className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Transição Alimentar</h1>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Guia completo de 10 dias para transição de ração para alimentação natural. Recurso exclusivo do plano Premium.
+            </p>
+            <Button onClick={() => setShowUpgrade(true)} variant="hero">
+              <Crown className="w-4 h-4 mr-2" />
+              Assinar Premium
+            </Button>
+            <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} feature="dietary_transition" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   // Fetch transition data
   useEffect(() => {
     if (!user || !selectedDogId) return;
