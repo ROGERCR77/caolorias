@@ -4,38 +4,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, Settings } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, Smartphone } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Subscription = () => {
   const { 
     planType, 
-    subscriptionStatus, 
+    planSource,
     trialEndsAt, 
     subscriptionEnd,
     daysUntilTrialExpires,
     isTrialExpired,
     isLoading,
     refreshSubscription,
-    openCheckout,
-    openCustomerPortal,
+    startInAppSubscription,
     isPremium,
   } = useSubscription();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshSubscription();
     setIsRefreshing(false);
-  };
-
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
-    await openCheckout();
-    setIsCheckingOut(false);
   };
 
   const getPlanBadge = () => {
@@ -48,9 +40,28 @@ const Subscription = () => {
     return <Badge variant="outline">Grátis</Badge>;
   };
 
+  const getPlanSourceText = () => {
+    if (!isPremium) return null;
+    
+    switch (planSource) {
+      case "appstore":
+        return "Assinatura via App Store";
+      case "playstore":
+        return "Assinatura via Google Play";
+      case "stripe":
+        return "Assinatura via site";
+      default:
+        return "Assinatura ativa";
+    }
+  };
+
   const getStatusMessage = () => {
-    if (planType === "premium" && subscriptionEnd) {
-      return `Renova em ${format(new Date(subscriptionEnd), "dd 'de' MMMM", { locale: ptBR })}`;
+    if (planType === "premium") {
+      const sourceText = getPlanSourceText();
+      if (subscriptionEnd) {
+        return `${sourceText} • Renova em ${format(new Date(subscriptionEnd), "dd 'de' MMMM", { locale: ptBR })}`;
+      }
+      return sourceText || "Você é assinante Premium do Cãolorias 🐾";
     }
     if (planType === "trial" && !isTrialExpired && trialEndsAt) {
       return `Teste expira em ${daysUntilTrialExpires} dia${daysUntilTrialExpires !== 1 ? "s" : ""}`;
@@ -58,7 +69,7 @@ const Subscription = () => {
     if (isTrialExpired) {
       return "Seu teste Premium expirou";
     }
-    return "Plano gratuito ativo";
+    return "Você está no plano gratuito. Alguns recursos avançados estão bloqueados.";
   };
 
   if (isLoading) {
@@ -98,6 +109,21 @@ const Subscription = () => {
             <CardDescription>{getStatusMessage()}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Premium status */}
+            {isPremium && planType === "premium" && (
+              <div className="p-4 rounded-lg bg-success/10 border border-success/20">
+                <p className="text-sm font-medium text-success-foreground flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-warning" />
+                  Você é assinante Premium do Cãolorias 🐾
+                </p>
+                {getPlanSourceText() && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {getPlanSourceText()}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Trial warning */}
             {planType === "trial" && !isTrialExpired && daysUntilTrialExpires && daysUntilTrialExpires <= 3 && (
               <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
@@ -121,44 +147,26 @@ const Subscription = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               {!isPremium && (
                 <Button 
-                  onClick={handleCheckout} 
+                  onClick={startInAppSubscription} 
                   className="flex-1"
-                  disabled={isCheckingOut}
                 >
-                  {isCheckingOut ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Crown className="w-4 h-4 mr-2" />
-                  )}
-                  Assinar Premium - R$ 39,90/mês
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Assinar pelo app
                 </Button>
               )}
 
-              {isPremium && planType === "premium" && (
-                <Button 
-                  variant="outline" 
-                  onClick={openCustomerPortal}
-                  className="flex-1"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Gerenciar Assinatura
-                </Button>
-              )}
-
-              {!isPremium && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  {isRefreshing ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                  )}
-                  Já paguei? Verificar
-                </Button>
-              )}
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Já sou assinante
+              </Button>
             </div>
           </CardContent>
         </Card>

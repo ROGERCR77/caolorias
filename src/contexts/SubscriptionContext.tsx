@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 interface SubscriptionState {
   isLoading: boolean;
   planType: "free" | "premium" | "trial";
+  planSource: string | null;
   subscriptionStatus: string;
   trialEndsAt: string | null;
   subscriptionEnd: string | null;
@@ -15,8 +16,7 @@ interface SubscriptionState {
 
 interface SubscriptionContextType extends SubscriptionState {
   refreshSubscription: () => Promise<void>;
-  openCheckout: () => Promise<void>;
-  openCustomerPortal: () => Promise<void>;
+  startInAppSubscription: () => void;
   isPremium: boolean;
   canAccessFeature: (feature: string) => boolean;
 }
@@ -46,6 +46,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SubscriptionState>({
     isLoading: true,
     planType: "free",
+    planSource: null,
     subscriptionStatus: "inactive",
     trialEndsAt: null,
     subscriptionEnd: null,
@@ -60,7 +61,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check local database first
+      // Check subscription from Supabase database
       const { data: subscription, error } = await supabase
         .from("user_subscriptions")
         .select("*")
@@ -82,33 +83,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           daysUntilTrialExpires = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         }
 
-        // Try to check Stripe subscription status
-        try {
-          const { data: stripeData, error: stripeError } = await supabase.functions.invoke("check-subscription", {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          });
-
-          if (!stripeError && stripeData?.subscribed) {
-            setState({
-              isLoading: false,
-              planType: "premium",
-              subscriptionStatus: "active",
-              trialEndsAt: subscription.trial_ends_at,
-              subscriptionEnd: stripeData.subscription_end,
-              isTrialExpired: false,
-              daysUntilTrialExpires: null,
-            });
-            return;
-          }
-        } catch (e) {
-          console.log("Stripe check failed, using local data");
+        // Determine effective plan type
+        let effectivePlanType: "free" | "premium" | "trial" = subscription.plan_type as "free" | "premium" | "trial";
+        if (isTrialActive) {
+          effectivePlanType = "trial";
+        } else if (isTrialExpired && subscription.plan_type !== "premium") {
+          effectivePlanType = "free";
         }
 
         setState({
           isLoading: false,
-          planType: isTrialActive ? "trial" : isTrialExpired ? "free" : subscription.plan_type as "free" | "premium" | "trial",
+          planType: effectivePlanType,
+          planSource: null, // Can be extended for "appstore" | "playstore" | "stripe"
           subscriptionStatus: subscription.subscription_status,
           trialEndsAt: subscription.trial_ends_at,
           subscriptionEnd: subscription.current_period_end,
@@ -124,68 +110,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const openCheckout = async () => {
-    if (!session) {
-      toast({
-        title: "Erro",
-        description: "Você precisa estar logado para assinar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.open(data.url, "_blank");
-      }
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Erro ao iniciar pagamento",
-        description: error.message || "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openCustomerPortal = async () => {
-    if (!session) {
-      toast({
-        title: "Erro",
-        description: "Você precisa estar logado.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke("customer-portal", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.open(data.url, "_blank");
-      }
-    } catch (error: any) {
-      console.error("Portal error:", error);
-      toast({
-        title: "Erro ao abrir portal",
-        description: error.message || "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    }
+  // TODO: Integrar In-App Purchase (Apple/Google) aqui
+  const startInAppSubscription = () => {
+    console.log("TODO: Iniciar fluxo de In-App Purchase nativo (Apple/Google)");
+    toast({
+      title: "Em breve",
+      description: "A assinatura pelo app estará disponível em breve. Aguarde!",
+    });
   };
 
   const canAccessFeature = (feature: string): boolean => {
@@ -198,7 +129,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     refreshSubscription();
   }, [user, session]);
 
-  // Auto-refresh when window gains focus (user returns from Stripe)
+  // Auto-refresh when window gains focus
   useEffect(() => {
     const handleFocus = () => {
       refreshSubscription();
@@ -215,8 +146,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       value={{
         ...state,
         refreshSubscription,
-        openCheckout,
-        openCustomerPortal,
+        startInAppSubscription,
         isPremium,
         canAccessFeature,
       }}
