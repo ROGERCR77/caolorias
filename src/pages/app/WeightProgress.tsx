@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useData, DogPorte, NivelAtividade } from "@/contexts/DataContext";
-import { Plus, Trash2, Scale, TrendingUp, TrendingDown, Minus, Dog, Loader2, Info, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Scale, TrendingUp, TrendingDown, Minus, Dog, Loader2, Info, AlertTriangle, Crown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { BreedReferenceCard } from "@/components/app/BreedReferenceCard";
 import { ActivityReferenceCard } from "@/components/app/ActivityReferenceCard";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
 
 const sizeToPorte: Record<string, DogPorte> = {
   small: "pequeno",
@@ -26,8 +28,10 @@ const sizeToPorte: Record<string, DogPorte> = {
 const WeightProgress = () => {
   const { dogs, weightLogs, selectedDogId, addWeightLog, deleteWeightLog, isLoading: dataLoading, getBreedByName, getActivityReference } = useData();
   const { toast } = useToast();
+  const { canAccessFeature, isPremium } = useSubscription();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -285,53 +289,76 @@ const WeightProgress = () => {
             {chartData.length > 1 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Evolução do peso</CardTitle>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>Evolução do peso</span>
+                    {!canAccessFeature("weight_history") && (
+                      <span className="flex items-center gap-1 text-sm font-normal text-warning">
+                        <Crown className="w-4 h-4" />
+                        Premium
+                      </span>
+                    )}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis 
-                          dataKey="date" 
-                          className="text-xs fill-muted-foreground"
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis 
-                          className="text-xs fill-muted-foreground"
-                          tick={{ fontSize: 12 }}
-                          domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                          tickFormatter={(value) => `${value}kg`}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                          labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(value: number) => [`${value} kg`, "Peso"]}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="peso"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={3}
-                          dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, fill: "hsl(var(--accent))" }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {/* Chart help text */}
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
-                        Use essa curva de peso para conversar com o médico-veterinário sobre a alimentação natural, quantidade de comida e rotina de exercícios de {selectedDog.name}. O gráfico não serve para diagnóstico, e sim para apoiar a avaliação profissional.
+                  {canAccessFeature("weight_history") ? (
+                    <>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis 
+                              dataKey="date" 
+                              className="text-xs fill-muted-foreground"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              className="text-xs fill-muted-foreground"
+                              tick={{ fontSize: 12 }}
+                              domain={['dataMin - 0.5', 'dataMax + 0.5']}
+                              tickFormatter={(value) => `${value}kg`}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "8px",
+                              }}
+                              labelStyle={{ color: "hsl(var(--foreground))" }}
+                              formatter={(value: number) => [`${value} kg`, "Peso"]}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="peso"
+                              stroke="hsl(var(--primary))"
+                              strokeWidth={3}
+                              dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+                              activeDot={{ r: 6, fill: "hsl(var(--accent))" }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Chart help text */}
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-muted-foreground">
+                            Use essa curva de peso para conversar com o médico-veterinário sobre a alimentação natural, quantidade de comida e rotina de exercícios de {selectedDog.name}. O gráfico não serve para diagnóstico, e sim para apoiar a avaliação profissional.
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-64 flex flex-col items-center justify-center text-center">
+                      <Lock className="w-12 h-12 text-muted-foreground mb-3" />
+                      <p className="text-muted-foreground mb-4">
+                        Gráficos de evolução de peso disponíveis no plano Premium
                       </p>
+                      <Button variant="outline" size="sm" onClick={() => setShowUpgrade(true)} className="gap-2">
+                        <Crown className="w-4 h-4 text-warning" />
+                        Ver planos
+                      </Button>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -407,6 +434,12 @@ const WeightProgress = () => {
             )}
           </div>
         )}
+        
+        <UpgradeModal 
+          open={showUpgrade} 
+          onOpenChange={setShowUpgrade}
+          feature="weight_history"
+        />
       </div>
     </AppLayout>
   );

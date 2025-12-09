@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useData, Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia } from "@/contexts/DataContext";
-import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Calculator, Target, Info, Scale, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Calculator, Target, Info, Scale, AlertTriangle, Crown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BreedCombobox } from "@/components/app/BreedCombobox";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { usePlanLimits } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
 
 const sizeLabels: Record<string, string> = {
   small: "Pequeno",
@@ -72,10 +75,16 @@ const condicaoCorporalDescriptions: Record<CondicaoCorporal, string> = {
 const Dogs = () => {
   const { dogs, addDog, updateDog, deleteDog, isLoading: dataLoading, getBreedByName } = useData();
   const { toast } = useToast();
+  const { isPremium, canAccessFeature } = useSubscription();
+  const planLimits = usePlanLimits();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDog, setEditingDog] = useState<Dog | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBreedRef, setSelectedBreedRef] = useState<BreedReference | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const canAddMoreDogs = dogs.length < planLimits.max_dogs;
+  const premiumObjectives: DogObjetivo[] = ["manter_peso", "perder_peso", "ganhar_peso"];
 
   // Form state
   const [formData, setFormData] = useState({
@@ -264,9 +273,16 @@ const Dogs = () => {
           <h1 className="text-2xl font-bold">Meus cães</h1>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openNewDogDialog}>
+              <Button onClick={() => {
+                if (!canAddMoreDogs && !editingDog) {
+                  setShowUpgrade(true);
+                } else {
+                  openNewDogDialog();
+                }
+              }}>
                 <Plus className="w-4 h-4" />
                 Adicionar cão
+                {!canAddMoreDogs && <Crown className="w-3 h-3 ml-1 text-warning" />}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg bg-card max-h-[90vh] overflow-y-auto">
@@ -411,10 +427,26 @@ const Dogs = () => {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-card">
-                          {Object.entries(objetivoLabels).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>{label}</SelectItem>
-                          ))}
+                      <SelectContent className="bg-card">
+                          {Object.entries(objetivoLabels).map(([value, label]) => {
+                            const isPremiumObjective = premiumObjectives.includes(value as DogObjetivo);
+                            const isCurrentValue = editingDog?.objetivo === value;
+                            const canUseObjective = isPremium || !isPremiumObjective || isCurrentValue;
+                            
+                            return (
+                              <SelectItem 
+                                key={value} 
+                                value={value}
+                                disabled={!canUseObjective}
+                                className={!canUseObjective ? "opacity-50" : ""}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {label}
+                                  {!canUseObjective && <Crown className="w-3 h-3 text-warning" />}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
@@ -607,6 +639,12 @@ const Dogs = () => {
             ))}
           </div>
         )}
+        
+        <UpgradeModal 
+          open={showUpgrade} 
+          onOpenChange={setShowUpgrade}
+          feature="multiple_dogs"
+        />
       </div>
     </AppLayout>
   );
