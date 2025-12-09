@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -21,10 +28,10 @@ const navItems = [
   { path: "/app/caes", label: "Cães", icon: Dog },
   { path: "/app/refeicoes", label: "Refeições", icon: UtensilsCrossed },
   { path: "/app/saude-digestiva", label: "Saúde", icon: Heart },
-  { path: "/app/peso-progresso", label: "Peso", icon: Scale },
 ];
 
 const moreNavItems = [
+  { path: "/app/peso-progresso", label: "Peso & Progresso", icon: Scale },
   { path: "/app/alimentos", label: "Alimentos", icon: Apple },
   { path: "/app/racas", label: "Raças", icon: BookOpen },
   { path: "/app/plano-alimentar", label: "Plano Alimentar", icon: ClipboardList },
@@ -32,12 +39,14 @@ const moreNavItems = [
   { path: "/app/atividade", label: "Atividade Física", icon: Activity },
   { path: "/app/transicao", label: "Transição Alimentar", icon: Leaf },
   { path: "/app/relatorio-vet", label: "Relatório Vet", icon: FileText },
+  { path: "/app/receitas", label: "Receitas", icon: ChefHat },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "Usuário";
 
@@ -46,7 +55,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate("/");
   };
 
+  const handleMoreNavClick = (path: string) => {
+    setMoreOpen(false);
+    navigate(path);
+  };
+
   const allNavItems = [...navItems, ...moreNavItems];
+  const isMoreActive = moreNavItems.some(item => location.pathname === item.path);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -108,9 +123,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <DropdownMenuItem asChild>
                   <Link to="/app/assinatura"><Crown className="w-4 h-4 mr-2" />Assinatura</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/app/receitas"><ChefHat className="w-4 h-4 mr-2" />Receitas</Link>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" />
@@ -162,6 +174,70 @@ export function AppLayout({ children }: AppLayoutProps) {
               </Link>
             );
           })}
+          
+          {/* More Button with Sheet */}
+          <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+            <SheetTrigger asChild>
+              <button
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 py-2 flex-1 press-effect relative",
+                  "touch-target"
+                )}
+              >
+                <MoreHorizontal 
+                  className={cn(
+                    "w-6 h-6 transition-all duration-200",
+                    isMoreActive ? "text-primary" : "text-muted-foreground"
+                  )} 
+                  strokeWidth={isMoreActive ? 2.5 : 2}
+                />
+                <span className={cn(
+                  "text-[10px] font-semibold transition-colors duration-200",
+                  isMoreActive ? "text-primary" : "text-muted-foreground"
+                )}>
+                  Mais
+                </span>
+                {isMoreActive && (
+                  <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-3xl pb-[var(--safe-area-inset-bottom)]">
+              <SheetHeader className="pb-4">
+                <SheetTitle className="text-center">Mais opções</SheetTitle>
+              </SheetHeader>
+              <div className="grid grid-cols-3 gap-3 pb-4">
+                {moreNavItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => handleMoreNavClick(item.path)}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all duration-200 press-effect",
+                        isActive 
+                          ? "bg-primary/10 border-2 border-primary" 
+                          : "bg-muted/50 border-2 border-transparent hover:bg-muted"
+                      )}
+                    >
+                      <item.icon 
+                        className={cn(
+                          "w-7 h-7",
+                          isActive ? "text-primary" : "text-muted-foreground"
+                        )} 
+                      />
+                      <span className={cn(
+                        "text-xs font-medium text-center leading-tight",
+                        isActive ? "text-primary" : "text-foreground"
+                      )}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </nav>
     </div>
