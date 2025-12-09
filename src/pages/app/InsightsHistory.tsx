@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Lightbulb, Calendar, Loader2, Dog } from "lucide-react";
+import { Lightbulb, Calendar, Loader2, Dog, Crown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
 
 interface InsightRecord {
   id: string;
@@ -19,12 +22,18 @@ interface InsightRecord {
 const InsightsHistory = () => {
   const { user } = useAuth();
   const { dogs } = useData();
+  const { isPremium } = useSubscription();
   const [history, setHistory] = useState<InsightRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
-    fetchHistory();
-  }, [user]);
+    if (isPremium) {
+      fetchHistory();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user, isPremium]);
 
   const fetchHistory = async () => {
     if (!user) return;
@@ -61,6 +70,30 @@ const InsightsHistory = () => {
         return "bg-primary/10 text-primary border-primary/20";
     }
   };
+
+  // Premium gate
+  if (!isPremium) {
+    return (
+      <AppLayout>
+        <div className="container px-4 py-6">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Crown className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Histórico de Insights</h1>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Acesse o histórico completo de insights gerados pela IA. Recurso exclusivo do plano Premium.
+            </p>
+            <Button onClick={() => setShowUpgrade(true)} variant="hero">
+              <Crown className="w-4 h-4 mr-2" />
+              Assinar Premium
+            </Button>
+            <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} feature="ai_insights_history" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (isLoading) {
     return (

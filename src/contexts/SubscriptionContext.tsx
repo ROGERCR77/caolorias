@@ -27,12 +27,16 @@ const PREMIUM_FEATURES = [
   "multiple_dogs",
   "weight_history",
   "ai_insights",
+  "ai_insights_history",
   "meal_plan",
   "favorites",
   "recipes",
   "advanced_alerts",
   "activity_recommendations",
   "pdf_export",
+  "vet_report",
+  "health_wallet",
+  "dietary_transition",
   "all_objectives",
 ];
 
