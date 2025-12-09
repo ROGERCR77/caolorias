@@ -94,7 +94,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setState({
           isLoading: false,
           planType: effectivePlanType,
-          planSource: null, // Can be extended for "appstore" | "playstore" | "stripe"
+          planSource: subscription.plan_source || null,
           subscriptionStatus: subscription.subscription_status,
           trialEndsAt: subscription.trial_ends_at,
           subscriptionEnd: subscription.current_period_end,
