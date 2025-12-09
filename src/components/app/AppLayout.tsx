@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,14 @@ const navItems = [
   { path: "/app/hoje", label: "Hoje", icon: Home },
   { path: "/app/caes", label: "Cães", icon: Dog },
   { path: "/app/refeicoes", label: "Refeições", icon: UtensilsCrossed },
-  { path: "/app/plano-alimentar", label: "Plano", icon: ClipboardList },
+  { path: "/app/saude-digestiva", label: "Saúde", icon: Heart },
   { path: "/app/peso-progresso", label: "Peso", icon: Scale },
 ];
 
 const moreNavItems = [
   { path: "/app/alimentos", label: "Alimentos", icon: Apple },
   { path: "/app/racas", label: "Raças", icon: BookOpen },
+  { path: "/app/plano-alimentar", label: "Plano Alimentar", icon: ClipboardList },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

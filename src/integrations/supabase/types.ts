@@ -199,6 +199,36 @@ export type Database = {
         }
         Relationships: []
       }
+      energy_logs: {
+        Row: {
+          created_at: string
+          dog_id: string
+          energy_level: string
+          id: string
+          logged_at: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          energy_level: string
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          energy_level?: string
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorite_meal_items: {
         Row: {
           created_at: string
@@ -285,6 +315,42 @@ export type Database = {
           kcal_per_100g?: number | null
           name?: string
           notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      health_symptoms: {
+        Row: {
+          created_at: string
+          dog_id: string
+          id: string
+          logged_at: string
+          notes: string | null
+          related_food_id: string | null
+          severity: string
+          symptoms: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          related_food_id?: string | null
+          severity: string
+          symptoms: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          related_food_id?: string | null
+          severity?: string
+          symptoms?: string[]
           user_id?: string
         }
         Relationships: []
@@ -527,6 +593,45 @@ export type Database = {
           max_history_days?: number
           max_meals_per_day?: number
           plan_type?: string
+        }
+        Relationships: []
+      }
+      poop_logs: {
+        Row: {
+          color: string
+          created_at: string
+          dog_id: string
+          has_blood: boolean
+          has_mucus: boolean
+          id: string
+          logged_at: string
+          notes: string | null
+          texture: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          dog_id: string
+          has_blood?: boolean
+          has_mucus?: boolean
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          texture: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          dog_id?: string
+          has_blood?: boolean
+          has_mucus?: boolean
+          id?: string
+          logged_at?: string
+          notes?: string | null
+          texture?: string
+          user_id?: string
         }
         Relationships: []
       }

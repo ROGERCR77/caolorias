@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { AIInsightsCard } from "@/components/app/AIInsightsCard";
+import { HealthQuickCard } from "@/components/app/HealthQuickCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -177,6 +178,9 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Health Quick Card */}
+            <HealthQuickCard />
 
             {/* Goal progress */}
             {(selectedDog.meta_kcal_dia || selectedDog.meta_gramas_dia) && (
