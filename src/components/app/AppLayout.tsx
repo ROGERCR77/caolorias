@@ -21,8 +21,11 @@ const navItems = [
   { path: "/app/caes", label: "Cães", icon: Dog },
   { path: "/app/refeicoes", label: "Refeições", icon: UtensilsCrossed },
   { path: "/app/plano-alimentar", label: "Plano", icon: ClipboardList },
-  { path: "/app/alimentos", label: "Alimentos", icon: Apple },
   { path: "/app/peso-progresso", label: "Peso", icon: Scale },
+];
+
+const moreNavItems = [
+  { path: "/app/alimentos", label: "Alimentos", icon: Apple },
   { path: "/app/racas", label: "Raças", icon: BookOpen },
 ];
 
@@ -38,15 +41,17 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate("/");
   };
 
+  const allNavItems = [...navItems, ...moreNavItems];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b shadow-sm safe-top">
         <div className="container px-4">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-12 sm:h-14">
             {/* Logo */}
-            <Link to="/app/hoje" className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary">
+            <Link to="/app/hoje" className="flex items-center gap-2 press-effect">
+              <div className="p-1.5 rounded-lg bg-gradient-hero">
                 <Dog className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="font-bold text-lg hidden sm:block">Cãolorias</span>
@@ -54,16 +59,16 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
-              {navItems.map((item) => {
+              {allNavItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      "px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
+                      "px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
                       isActive
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
@@ -77,9 +82,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary" />
+                <Button variant="ghost" size="sm" className="gap-2 press-effect">
+                  <div className="w-8 h-8 rounded-full bg-gradient-hero flex items-center justify-center shadow-sm">
+                    <User className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <span className="hidden sm:block text-sm font-medium max-w-24 truncate">
                     {userName}
@@ -114,12 +119,14 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 pb-20 lg:pb-6">
-        {children}
+        <div className="page-enter">
+          {children}
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t lg:hidden">
-        <div className="flex items-center justify-around h-16 px-1">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t lg:hidden safe-bottom">
+        <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -127,12 +134,30 @@ export function AppLayout({ children }: AppLayoutProps) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-lg transition-colors flex-1 max-w-16",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  "flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all duration-200 flex-1 max-w-16 press-effect",
+                  isActive 
+                    ? "text-primary" 
+                    : "text-muted-foreground active:text-primary"
                 )}
               >
-                <item.icon className={cn("w-5 h-5", isActive && "text-primary")} />
-                <span className="text-[9px] font-medium">{item.label}</span>
+                <div className={cn(
+                  "p-1.5 rounded-xl transition-all duration-200",
+                  isActive && "bg-primary/10"
+                )}>
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-transform duration-200",
+                    isActive && "scale-110"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-[10px] font-semibold transition-all duration-200",
+                  isActive && "text-primary"
+                )}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <div className="absolute bottom-1 w-1 h-1 rounded-full bg-primary" />
+                )}
               </Link>
             );
           })}
