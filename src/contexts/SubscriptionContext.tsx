@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Capacitor } from "@capacitor/core";
 
 interface SubscriptionState {
   isLoading: boolean;
@@ -16,9 +17,11 @@ interface SubscriptionState {
 
 interface SubscriptionContextType extends SubscriptionState {
   refreshSubscription: () => Promise<void>;
-  startInAppSubscription: () => void;
+  startInAppSubscription: (productId?: string) => Promise<void>;
+  restorePurchases: () => Promise<void>;
   isPremium: boolean;
   canAccessFeature: (feature: string) => boolean;
+  isNativePlatform: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -40,6 +43,11 @@ const PREMIUM_FEATURES = [
   "all_objectives",
 ];
 
+const PRODUCT_IDS = {
+  PREMIUM_MONTHLY: "caolorias_premium_monthly",
+  PREMIUM_YEARLY: "caolorias_premium_yearly",
+};
+
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const { toast } = useToast();
@@ -53,6 +61,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     isTrialExpired: false,
     daysUntilTrialExpires: null,
   });
+
+  const isNativePlatform = Capacitor.isNativePlatform();
+  const platform = Capacitor.getPlatform();
 
   const refreshSubscription = async () => {
     if (!user || !session) {
@@ -110,13 +121,109 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // TODO: Integrar In-App Purchase (Apple/Google) aqui
-  const startInAppSubscription = () => {
-    console.log("TODO: Iniciar fluxo de In-App Purchase nativo (Apple/Google)");
-    toast({
-      title: "Em breve",
-      description: "A assinatura pelo app estará disponível em breve. Aguarde!",
-    });
+  // Start In-App Purchase flow
+  const startInAppSubscription = async (productId?: string) => {
+    const selectedProductId = productId || PRODUCT_IDS.PREMIUM_MONTHLY;
+
+    if (!isNativePlatform) {
+      toast({
+        title: "Compra no app",
+        description: "As compras nativas só estão disponíveis no aplicativo iOS ou Android.",
+      });
+      return;
+    }
+
+    try {
+      console.log("Starting IAP for product:", selectedProductId);
+
+      // @ts-ignore - cordova-plugin-purchase
+      if (typeof CdvPurchase === "undefined") {
+        toast({
+          title: "Em breve",
+          description: "As compras no app estarão disponíveis em breve!",
+        });
+        return;
+      }
+
+      // @ts-ignore - cordova-plugin-purchase
+      const { store } = CdvPurchase;
+      const product = store.get(selectedProductId);
+
+      if (!product) {
+        toast({
+          title: "Produto não encontrado",
+          description: "Não foi possível encontrar o produto. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const offer = product.getOffer();
+      if (!offer) {
+        toast({
+          title: "Oferta indisponível",
+          description: "A oferta não está disponível no momento.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Start purchase flow
+      await offer.order();
+      
+      // The transaction will be handled by the store.when().approved() callback
+      // which is set up in the useInAppPurchase hook
+    } catch (error: any) {
+      console.error("Error starting IAP:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível iniciar a compra",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Restore previous purchases
+  const restorePurchases = async () => {
+    if (!isNativePlatform) {
+      toast({
+        title: "Restauração",
+        description: "A restauração de compras só está disponível no aplicativo nativo.",
+      });
+      return;
+    }
+
+    try {
+      console.log("Restoring purchases...");
+
+      // @ts-ignore - cordova-plugin-purchase
+      if (typeof CdvPurchase === "undefined") {
+        toast({
+          title: "Indisponível",
+          description: "O sistema de compras não está disponível no momento.",
+        });
+        return;
+      }
+
+      // @ts-ignore - cordova-plugin-purchase
+      const { store } = CdvPurchase;
+      await store.restorePurchases();
+
+      // Refresh subscription status after restore
+      await refreshSubscription();
+
+      toast({
+        title: "Compras restauradas",
+        description: "Suas compras anteriores foram verificadas.",
+      });
+    } catch (error: any) {
+      console.error("Error restoring purchases:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível restaurar as compras",
+        variant: "destructive",
+      });
+    }
   };
 
   const canAccessFeature = (feature: string): boolean => {
@@ -147,8 +254,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         ...state,
         refreshSubscription,
         startInAppSubscription,
+        restorePurchases,
         isPremium,
         canAccessFeature,
+        isNativePlatform,
       }}
     >
       {children}
@@ -163,3 +272,5 @@ export function useSubscription() {
   }
   return context;
 }
+
+export { PRODUCT_IDS };

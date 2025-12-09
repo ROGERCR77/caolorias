@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, Smartphone, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -19,7 +19,9 @@ const Subscription = () => {
     isLoading,
     refreshSubscription,
     startInAppSubscription,
+    restorePurchases,
     isPremium,
+    isNativePlatform,
   } = useSubscription();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -147,7 +149,7 @@ const Subscription = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               {!isPremium && (
                 <Button 
-                  onClick={startInAppSubscription} 
+                  onClick={() => startInAppSubscription()} 
                   className="flex-1"
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
@@ -165,8 +167,18 @@ const Subscription = () => {
                 ) : (
                   <RefreshCw className="w-4 h-4 mr-2" />
                 )}
-                Já sou assinante
+                Verificar status
               </Button>
+
+              {isNativePlatform && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => restorePurchases()}
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Restaurar compras
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
