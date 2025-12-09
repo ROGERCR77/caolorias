@@ -67,7 +67,7 @@ const COMMON_ANTIPULGAS = [
 export default function HealthWallet() {
   const { user } = useAuth();
   const { selectedDogId, dogs, isLoading: dataLoading } = useData();
-  const { isPremium, canAccessFeature } = useSubscription();
+  const { isPremium } = useSubscription();
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -84,7 +84,36 @@ export default function HealthWallet() {
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
 
-  // Check premium access
+  // Fetch records - must be before any conditional returns
+  useEffect(() => {
+    if (!user || !selectedDogId || !isPremium) return;
+    
+    const fetchRecords = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('health_records')
+        .select('*')
+        .eq('dog_id', selectedDogId)
+        .order('applied_at', { ascending: false });
+
+      if (data) setRecords(data);
+      setIsLoading(false);
+    };
+
+    fetchRecords();
+  }, [user, selectedDogId, isPremium]);
+
+  // Get suggestions based on type
+  const getSuggestions = () => {
+    switch (recordType) {
+      case 'vacina': return COMMON_VACCINES;
+      case 'vermifugo': return COMMON_VERMIFUGES;
+      case 'antipulgas': return COMMON_ANTIPULGAS;
+      default: return [];
+    }
+  };
+
+  // Check premium access - AFTER all hooks
   if (!isPremium) {
     return (
       <AppLayout>
@@ -107,35 +136,6 @@ export default function HealthWallet() {
       </AppLayout>
     );
   }
-
-  // Fetch records
-  useEffect(() => {
-    if (!user || !selectedDogId) return;
-    
-    const fetchRecords = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('health_records')
-        .select('*')
-        .eq('dog_id', selectedDogId)
-        .order('applied_at', { ascending: false });
-
-      if (data) setRecords(data);
-      setIsLoading(false);
-    };
-
-    fetchRecords();
-  }, [user, selectedDogId]);
-
-  // Get suggestions based on type
-  const getSuggestions = () => {
-    switch (recordType) {
-      case 'vacina': return COMMON_VACCINES;
-      case 'vermifugo': return COMMON_VERMIFUGES;
-      case 'antipulgas': return COMMON_ANTIPULGAS;
-      default: return [];
-    }
-  };
 
   // Upload photo
   const uploadPhoto = async (): Promise<string | null> => {
