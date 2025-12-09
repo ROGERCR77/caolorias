@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          created_at: string
+          dog_id: string
+          duration_minutes: number
+          id: string
+          intensity: string
+          logged_at: string
+          notes: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          duration_minutes: number
+          id?: string
+          intensity: string
+          logged_at?: string
+          notes?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          duration_minutes?: number
+          id?: string
+          intensity?: string
+          logged_at?: string
+          notes?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_reference: {
         Row: {
           energia: string
@@ -289,6 +325,42 @@ export type Database = {
         }
         Relationships: []
       }
+      food_intolerances: {
+        Row: {
+          created_at: string
+          dog_id: string
+          food_id: string | null
+          food_name: string | null
+          id: string
+          notes: string | null
+          reaction_type: string
+          symptoms: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          food_id?: string | null
+          food_name?: string | null
+          id?: string
+          notes?: string | null
+          reaction_type: string
+          symptoms?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          food_id?: string | null
+          food_name?: string | null
+          id?: string
+          notes?: string | null
+          reaction_type?: string
+          symptoms?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       foods: {
         Row: {
           category: string | null
@@ -315,6 +387,45 @@ export type Database = {
           kcal_per_100g?: number | null
           name?: string
           notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      health_records: {
+        Row: {
+          applied_at: string
+          created_at: string
+          dog_id: string
+          id: string
+          name: string
+          next_due_at: string | null
+          notes: string | null
+          photo_url: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          applied_at: string
+          created_at?: string
+          dog_id: string
+          id?: string
+          name: string
+          next_due_at?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          created_at?: string
+          dog_id?: string
+          id?: string
+          name?: string
+          next_due_at?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          type?: string
           user_id?: string
         }
         Relationships: []

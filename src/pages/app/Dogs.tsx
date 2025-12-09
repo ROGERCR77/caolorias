@@ -13,6 +13,7 @@ import { BreedCombobox } from "@/components/app/BreedCombobox";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePlanLimits } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
+import { FoodIntolerancesCard } from "@/components/app/FoodIntolerancesCard";
 
 const sizeLabels: Record<string, string> = {
   small: "Pequeno",
@@ -613,6 +614,11 @@ const Dogs = () => {
                         <span className="font-medium text-primary">{dog.meta_kcal_dia} kcal</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Food Intolerances */}
+                  <div className="mt-4 pt-4 border-t">
+                    <FoodIntolerancesCard dogId={dog.id} />
                   </div>
 
                   <div className="flex gap-2 mt-4 pt-4 border-t">
