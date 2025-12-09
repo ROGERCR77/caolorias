@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia } from "@/contexts/DataContext";
+import { Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, DogSex, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia } from "@/contexts/DataContext";
 import { Calculator, Target, Info, Scale, AlertTriangle, Crown, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BreedCombobox } from "@/components/app/BreedCombobox";
@@ -56,12 +56,18 @@ const condicaoCorporalDescriptions: Record<CondicaoCorporal, string> = {
   acima_peso: "Costelas difíceis de sentir",
 };
 
+const sexLabels: Record<DogSex, string> = {
+  macho: "Macho",
+  femea: "Fêmea",
+};
+
 interface DogFormData {
   name: string;
   breed: string;
   birth_date: string;
   current_weight_kg: string;
   size: Dog["size"];
+  sex: DogSex;
   feeding_type: Dog["feeding_type"];
   objetivo: DogObjetivo;
   nivel_atividade: NivelAtividade;
@@ -92,6 +98,7 @@ export function DogForm({ editingDog, onSubmit, onCancel, getBreedByName }: DogF
     birth_date: editingDog?.birth_date || "",
     current_weight_kg: editingDog?.current_weight_kg?.toString() || "",
     size: editingDog?.size || "medium",
+    sex: editingDog?.sex || "macho",
     feeding_type: editingDog?.feeding_type || "natural",
     objetivo: editingDog?.objetivo || "manter_peso",
     nivel_atividade: editingDog?.nivel_atividade || "moderada",
@@ -224,6 +231,24 @@ export function DogForm({ editingDog, onSubmit, onCancel, getBreedByName }: DogF
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
+            <Label className="text-sm">Sexo</Label>
+            <Select
+              value={formData.sex}
+              onValueChange={(v) => setFormData({ ...formData, sex: v as DogSex })}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card">
+                {Object.entries(sexLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
             <Label className="text-sm">Porte</Label>
             <Select
               value={formData.size}
@@ -241,26 +266,26 @@ export function DogForm({ editingDog, onSubmit, onCancel, getBreedByName }: DogF
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-sm">Alimentação</Label>
-            <Select
-              value={formData.feeding_type}
-              onValueChange={(v) => setFormData({ ...formData, feeding_type: v as Dog["feeding_type"] })}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card">
-                {Object.entries(feedingTypeLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    <span>{label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm">Alimentação</Label>
+          <Select
+            value={formData.feeding_type}
+            onValueChange={(v) => setFormData({ ...formData, feeding_type: v as Dog["feeding_type"] })}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger className="h-11">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-card">
+              {Object.entries(feedingTypeLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  <span>{label}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {showNaturalFeedingWarning && (

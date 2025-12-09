@@ -59,6 +59,7 @@ const Dogs = () => {
     birth_date: string;
     current_weight_kg: string;
     size: Dog["size"];
+    sex: Dog["sex"];
     feeding_type: Dog["feeding_type"];
     objetivo: DogObjetivo;
     nivel_atividade: string;
@@ -72,6 +73,7 @@ const Dogs = () => {
       birth_date: formData.birth_date || null,
       current_weight_kg: parseFloat(formData.current_weight_kg) || 0,
       size: formData.size,
+      sex: formData.sex,
       feeding_type: formData.feeding_type,
       objetivo: formData.objetivo,
       nivel_atividade: formData.nivel_atividade as Dog["nivel_atividade"],

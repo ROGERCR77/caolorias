@@ -8,6 +8,8 @@ export type NivelAtividade = "baixa" | "moderada" | "alta";
 export type CondicaoCorporal = "magro" | "ideal" | "acima_peso";
 export type DogPorte = "pequeno" | "medio" | "grande" | "gigante";
 
+export type DogSex = "macho" | "femea";
+
 export interface Dog {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface Dog {
   current_weight_kg: number;
   size: "small" | "medium" | "large" | "giant";
   feeding_type: "natural" | "kibble" | "mixed";
+  sex: DogSex;
   photo_url?: string | null;
   objetivo: DogObjetivo;
   nivel_atividade: NivelAtividade;
@@ -255,6 +258,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ...d,
         size: d.size as Dog["size"],
         feeding_type: d.feeding_type as Dog["feeding_type"],
+        sex: (d.sex || "macho") as DogSex,
         objetivo: (d.objetivo || "manter_peso") as DogObjetivo,
         nivel_atividade: (d.nivel_atividade || "moderada") as NivelAtividade,
         condicao_corporal: (d.condicao_corporal || "ideal") as CondicaoCorporal,
@@ -299,6 +303,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         birth_date: dog.birth_date,
         current_weight_kg: dog.current_weight_kg,
         size: dog.size,
+        sex: dog.sex,
         feeding_type: dog.feeding_type,
         photo_url: dog.photo_url,
         objetivo: dog.objetivo,
@@ -312,9 +317,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     if (error) throw error;
 
-    const newDog = {
+    const newDog: Dog = {
       ...data,
       size: data.size as Dog["size"],
+      sex: (data.sex || "macho") as DogSex,
       feeding_type: data.feeding_type as Dog["feeding_type"],
       objetivo: data.objetivo as DogObjetivo,
       nivel_atividade: data.nivel_atividade as NivelAtividade,
