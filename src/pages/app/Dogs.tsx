@@ -3,14 +3,14 @@ import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useData, Dog, DogObjetivo } from "@/contexts/DataContext";
-import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Crown } from "lucide-react";
+import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Crown, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePlanLimits } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
 import { FoodIntolerancesCard } from "@/components/app/FoodIntolerancesCard";
-import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
-import { DogForm } from "@/components/app/DogForm";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DogFormWizard, DogFormData } from "@/components/app/DogFormWizard";
 
 const sizeLabels: Record<string, string> = {
   small: "Pequeno",
@@ -53,20 +53,7 @@ const Dogs = () => {
     setIsDialogOpen(true);
   };
 
-  const handleFormSubmit = async (formData: {
-    name: string;
-    breed: string;
-    birth_date: string;
-    current_weight_kg: string;
-    size: Dog["size"];
-    sex: Dog["sex"];
-    feeding_type: Dog["feeding_type"];
-    objetivo: DogObjetivo;
-    nivel_atividade: string;
-    condicao_corporal: string;
-    meta_kcal_dia: string;
-    meta_gramas_dia: string;
-  }) => {
+  const handleFormSubmit = async (formData: DogFormData) => {
     const dogData = {
       name: formData.name.trim(),
       breed: formData.breed.trim(),
@@ -148,19 +135,23 @@ const Dogs = () => {
           </Button>
         </div>
 
-        {/* Responsive Dialog/Drawer */}
-        <ResponsiveDialog 
-          open={isDialogOpen} 
-          onOpenChange={setIsDialogOpen}
-          title={editingDog ? "Editar cão" : "Adicionar cão"}
-        >
-          <DogForm
-            editingDog={editingDog}
-            onSubmit={handleFormSubmit}
-            onCancel={() => setIsDialogOpen(false)}
-            getBreedByName={getBreedByName}
-          />
-        </ResponsiveDialog>
+        {/* Fullscreen Wizard Sheet */}
+        <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <SheetContent side="bottom" className="h-[95vh] rounded-t-3xl">
+            <SheetHeader className="flex flex-row items-center justify-between pb-2">
+              <SheetTitle>{editingDog ? "Editar cão" : "Adicionar cão"}</SheetTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsDialogOpen(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </SheetHeader>
+            <DogFormWizard
+              editingDog={editingDog}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setIsDialogOpen(false)}
+              getBreedByName={getBreedByName}
+            />
+          </SheetContent>
+        </Sheet>
 
         {dogs.length === 0 ? (
           <Card variant="elevated" className="text-center py-12">
