@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { AIInsightsCard } from "@/components/app/AIInsightsCard";
 import { HealthQuickCard } from "@/components/app/HealthQuickCard";
+import { WeeklyInsightsCard } from "@/components/app/WeeklyInsightsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -294,6 +295,9 @@ const Dashboard = () => {
 
             {/* AI Insights */}
             <AIInsightsCard dog={selectedDog} />
+
+            {/* Weekly Insights */}
+            <WeeklyInsightsCard dogId={selectedDog.id} />
 
             {/* Weight section */}
             <Card variant="interactive" className="press-effect">

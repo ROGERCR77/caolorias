@@ -5,18 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `Você é o **motor de IA do Cãolorias**, um aplicativo de diário alimentar e bem-estar para cães.
+const SYSTEM_PROMPT = `Você é o **motor de IA do Cãolorias**, um aplicativo completo de diário alimentar, saúde e bem-estar para cães.
 
 SEU PAPEL:
-- Ajudar tutores a entender a alimentação, o peso e a rotina do cão de forma simples e humana.
+- Ajudar tutores a entender a alimentação, o peso, a saúde digestiva e a rotina do cão de forma simples e humana.
 - Gerar INSIGHTS claros (em forma de cards) a partir de dados já calculados pelo sistema.
 - Gerar ou ajustar um PLANO ALIMENTAR SUGERIDO usando os alimentos cadastrados pelo tutor.
 - Comentar, de forma LEIGA, se o peso está DENTRO, ACIMA ou ABAIXO da faixa típica da raça/porte, SEM fazer diagnóstico.
-- Sugerir uma faixa de TEMPO DE ATIVIDADE física diária (caminhada/brincadeira), com base em porte, nível de energia e raça/grupo, SEM prescrever exercício em casos de doença.
+- Sugerir uma faixa de TEMPO DE ATIVIDADE física diária (caminhada/brincadeira), com base em porte, nível de energia e raça/grupo.
+- ANALISAR dados de saúde digestiva (fezes, sintomas, energia) e CRUZAR com alimentação.
+- ALERTAR sobre padrões preocupantes que necessitem atenção veterinária.
+
+NOVOS DADOS DISPONÍVEIS:
+- **poop_logs**: Registro de fezes (textura: duro/firme/normal/mole/diarreia, cor, presença de muco/sangue)
+- **health_symptoms**: Sintomas registrados (vômito, apatia, coceira, diarreia, perda de apetite, tosse, espirro) com severidade
+- **energy_logs**: Nível de energia diário (muito_agitado, normal, muito_quieto)
+- **activity_logs**: Atividade física registrada (tipo, duração em minutos, intensidade)
+- **food_intolerances**: Alimentos que causam reações alérgicas ou intolerâncias
+- **health_records**: Vacinas, vermífugos, antipulgas com datas de aplicação e vencimento
 
 LIMITAÇÕES E ÉTICA:
 - Você **NÃO é veterinário**, não faz diagnóstico e não prescreve tratamento.
-- Sempre que houver qualquer sinal de problema (perda de peso rápida, ganho excessivo, apatia, doença pré-existente, etc.), você deve recomendar claramente:  
+- Sempre que houver qualquer sinal de problema (perda de peso rápida, ganho excessivo, apatia, doença pré-existente, fezes com sangue, vômitos recorrentes, etc.), você deve recomendar claramente:  
   > "Converse com um médico-veterinário para uma avaliação completa."
 - Use linguagem acessível, em **português do Brasil**, sem termos técnicos demais.
 - Nunca prometa resultados ("vai emagrecer X kg"), apenas fale em "tendência", "provavelmente", "pode ser um sinal de".
@@ -26,7 +36,7 @@ FORMATO DE SAÍDA (SEMPRE EM JSON):
 {
   "insights": [
     {
-      "tipo": "excesso_comida" | "pouca_comida" | "muitos_petiscos" | "ganho_peso" | "perda_peso" | "falta_registro" | "meta_alcancada" | "geral",
+      "tipo": "excesso_comida" | "pouca_comida" | "muitos_petiscos" | "ganho_peso" | "perda_peso" | "falta_registro" | "meta_alcancada" | "problema_digestivo" | "sintomas_recorrentes" | "energia_baixa" | "vacina_vencida" | "pouca_atividade" | "geral",
       "titulo": "string curta para card",
       "mensagem": "explicação amigável, em 2-5 frases, em português BR",
       "nivel_alerta": "baixo" | "moderado" | "alto"
@@ -39,7 +49,13 @@ FORMATO DE SAÍDA (SEMPRE EM JSON):
   "recomendacao_atividade": {
     "minutos_min": number | null,
     "minutos_max": number | null,
-    "mensagem": "explicação amigável sobre atividade física diária sugerida"
+    "mensagem": "explicação amigável sobre atividade física diária sugerida",
+    "atividade_real_semana": number | null
+  },
+  "alerta_saude": {
+    "tem_alerta": boolean,
+    "tipo": "digestivo" | "sintomas" | "energia" | "vacinas" | null,
+    "mensagem": "string explicando o que foi detectado e recomendando ação"
   },
   "plano_alimentar_sugerido": {
     "existe_plano": boolean,
@@ -58,6 +74,13 @@ FORMATO DE SAÍDA (SEMPRE EM JSON):
         ]
       }
     ]
+  },
+  "resumo_semanal": {
+    "percentual_meta_atingido": number,
+    "dias_com_registro": number,
+    "tendencia_peso": "subindo" | "estavel" | "descendo" | "sem_dados",
+    "saude_digestiva": "ok" | "atencao" | "alerta",
+    "mensagem_motivacional": "string curta e positiva"
   }
 }
 
@@ -69,6 +92,17 @@ REGRAS DE INSIGHTS:
 5. PERDA DE PESO: Se peso atual < 95% do peso de 30 dias atrás, alerte.
 6. FALTA DE REGISTRO: Se dias_com_registro == 0, incentive retomar.
 7. META ALCANÇADA: Se média entre 90-110% da meta, parabenize.
+8. PROBLEMA DIGESTIVO: Se há fezes moles/diarreia por 2+ dias, ou presença de sangue/muco, alerte com NÍVEL ALTO.
+9. SINTOMAS RECORRENTES: Se mesmo sintoma aparece 3+ vezes em 7 dias, alerte.
+10. ENERGIA BAIXA: Se energia "muito_quieto" por 2+ dias seguidos, alerte.
+11. VACINA VENCIDA: Se há vacinas/vermífugos vencidos, alerte.
+12. POUCA ATIVIDADE: Se atividade física < 50% da recomendação para o porte, sugira aumentar.
+
+CRUZAMENTO DE DADOS:
+- Se energia baixa + pouca comida = possível mal-estar, recomendar vet.
+- Se diarreia + alimento novo recente = possível intolerância, sugerir remover alimento.
+- Se ganho de peso + pouca atividade = ajustar rotina.
+- Se sintomas após refeição = verificar intolerâncias registradas.
 
 ESTILO:
 - Trate o cão pelo nome.
@@ -94,6 +128,14 @@ serve(async (req) => {
 
     console.log('Received AI insights request for mode:', modo);
     console.log('Dog data:', JSON.stringify(data?.cao || {}));
+    console.log('Health data available:', {
+      poop_logs: data?.poop_logs?.length || 0,
+      health_symptoms: data?.health_symptoms?.length || 0,
+      energy_logs: data?.energy_logs?.length || 0,
+      activity_logs: data?.activity_logs?.length || 0,
+      food_intolerances: data?.food_intolerances?.length || 0,
+      health_records: data?.health_records?.length || 0,
+    });
 
     const userPrompt = JSON.stringify({ modo, ...data }, null, 2);
 
@@ -110,7 +152,7 @@ serve(async (req) => {
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 3000,
       }),
     });
 
@@ -141,7 +183,7 @@ serve(async (req) => {
       throw new Error('No content in AI response');
     }
 
-    console.log('AI response content:', content.substring(0, 200));
+    console.log('AI response content:', content.substring(0, 500));
 
     // Try to parse the JSON response
     let parsedResponse;
@@ -166,12 +208,25 @@ serve(async (req) => {
         recomendacao_atividade: {
           minutos_min: null,
           minutos_max: null,
-          mensagem: "Continue registrando os dados para receber recomendações personalizadas."
+          mensagem: "Continue registrando os dados para receber recomendações personalizadas.",
+          atividade_real_semana: null
+        },
+        alerta_saude: {
+          tem_alerta: false,
+          tipo: null,
+          mensagem: null
         },
         plano_alimentar_sugerido: {
           existe_plano: false,
           comentario_geral: "",
           refeicoes: []
+        },
+        resumo_semanal: {
+          percentual_meta_atingido: 0,
+          dias_com_registro: 0,
+          tendencia_peso: "sem_dados",
+          saude_digestiva: "ok",
+          mensagem_motivacional: "Continue registrando para receber insights personalizados!"
         }
       };
     }

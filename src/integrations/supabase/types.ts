@@ -142,6 +142,45 @@ export type Database = {
           },
         ]
       }
+      dietary_transitions: {
+        Row: {
+          created_at: string
+          current_day: number
+          dog_id: string
+          id: string
+          notes: string | null
+          started_at: string
+          status: string
+          total_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_day?: number
+          dog_id: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+          status?: string
+          total_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_day?: number
+          dog_id?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+          status?: string
+          total_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dog_breed_reference: {
         Row: {
           braquicefalico: boolean
@@ -886,6 +925,56 @@ export type Database = {
           },
         ]
       }
+      transition_daily_logs: {
+        Row: {
+          completed: boolean
+          created_at: string
+          day_number: number
+          id: string
+          kibble_percentage: number
+          logged_at: string
+          natural_percentage: number
+          notes: string | null
+          symptoms: string[] | null
+          transition_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          day_number: number
+          id?: string
+          kibble_percentage: number
+          logged_at?: string
+          natural_percentage: number
+          notes?: string | null
+          symptoms?: string[] | null
+          transition_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          day_number?: number
+          id?: string
+          kibble_percentage?: number
+          logged_at?: string
+          natural_percentage?: number
+          notes?: string | null
+          symptoms?: string[] | null
+          transition_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transition_daily_logs_transition_id_fkey"
+            columns: ["transition_id"]
+            isOneToOne: false
+            referencedRelation: "dietary_transitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
@@ -984,6 +1073,36 @@ export type Database = {
           trial_started_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_insights: {
+        Row: {
+          created_at: string
+          dog_id: string
+          id: string
+          insights_data: Json
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          id?: string
+          insights_data: Json
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          id?: string
+          insights_data?: Json
+          user_id?: string
+          week_end?: string
+          week_start?: string
         }
         Relationships: []
       }

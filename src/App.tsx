@@ -30,6 +30,8 @@ import InsightsHistory from "./pages/app/InsightsHistory";
 import DigestiveHealth from "./pages/app/DigestiveHealth";
 import HealthWallet from "./pages/app/HealthWallet";
 import Activity from "./pages/app/Activity";
+import DietaryTransition from "./pages/app/DietaryTransition";
+import VetReport from "./pages/app/VetReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +70,8 @@ const App = () => (
                   <Route path="/app/saude-digestiva" element={<ProtectedRoute><DigestiveHealth /></ProtectedRoute>} />
                   <Route path="/app/carteira-saude" element={<ProtectedRoute><HealthWallet /></ProtectedRoute>} />
                   <Route path="/app/atividade" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
+                  <Route path="/app/transicao" element={<ProtectedRoute><DietaryTransition /></ProtectedRoute>} />
+                  <Route path="/app/relatorio-vet" element={<ProtectedRoute><VetReport /></ProtectedRoute>} />
 
                   {/* Redirect /app to /app/hoje */}
                   <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
