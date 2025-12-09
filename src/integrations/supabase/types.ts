@@ -232,6 +232,7 @@ export type Database = {
           nivel_atividade: string | null
           objetivo: string | null
           photo_url: string | null
+          sex: string | null
           size: string | null
           updated_at: string
           user_id: string
@@ -250,6 +251,7 @@ export type Database = {
           nivel_atividade?: string | null
           objetivo?: string | null
           photo_url?: string | null
+          sex?: string | null
           size?: string | null
           updated_at?: string
           user_id: string
@@ -268,6 +270,7 @@ export type Database = {
           nivel_atividade?: string | null
           objetivo?: string | null
           photo_url?: string | null
+          sex?: string | null
           size?: string | null
           updated_at?: string
           user_id?: string
