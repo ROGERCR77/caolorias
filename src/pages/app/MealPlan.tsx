@@ -10,9 +10,11 @@ import { useData, MealPlanItem } from "@/contexts/DataContext";
 import { Link } from "react-router-dom";
 import { 
   Loader2, AlertTriangle, Target, UtensilsCrossed, RefreshCcw, 
-  Info, ChevronRight, Beef, Wheat, Salad
+  Info, ChevronRight, Beef, Wheat, Salad, Crown, Lock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
 
 const objetivoLabels: Record<string, string> = {
   manter_peso: "Manter peso",
@@ -36,7 +38,9 @@ const categoryIcons: Record<string, React.ElementType> = {
 const MealPlan = () => {
   const { dogs, foods, mealPlans, selectedDogId, addMealPlan, isLoading } = useData();
   const { toast } = useToast();
+  const { isPremium, canAccessFeature } = useSubscription();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const [formData, setFormData] = useState({
     numero_refeicoes: "2",
@@ -177,6 +181,41 @@ const MealPlan = () => {
       <AppLayout>
         <div className="container px-4 py-8 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Block free users
+  if (!canAccessFeature("meal_plan")) {
+    return (
+      <AppLayout>
+        <div className="container px-4 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h1 className="text-2xl font-bold">Plano Alimentar</h1>
+          </div>
+
+          <Card className="max-w-md mx-auto text-center">
+            <CardContent className="pt-8 pb-8">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning/10 flex items-center justify-center">
+                <Lock className="w-8 h-8 text-warning" />
+              </div>
+              <h2 className="text-xl font-bold mb-2">Recurso Premium</h2>
+              <p className="text-muted-foreground mb-6">
+                O Plano Alimentar com sugestões automáticas está disponível apenas para assinantes Premium.
+              </p>
+              <Button onClick={() => setShowUpgrade(true)} className="gap-2">
+                <Crown className="w-4 h-4" />
+                Conhecer o Premium
+              </Button>
+            </CardContent>
+          </Card>
+
+          <UpgradeModal 
+            open={showUpgrade} 
+            onOpenChange={setShowUpgrade}
+            feature="meal_plan"
+          />
         </div>
       </AppLayout>
     );
