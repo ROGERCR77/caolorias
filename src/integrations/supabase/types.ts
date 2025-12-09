@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          threshold: number | null
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          threshold?: number | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          threshold?: number | null
+        }
+        Relationships: []
+      }
       activity_reference: {
         Row: {
           energia: string
@@ -40,6 +73,38 @@ export type Database = {
           porte?: string
         }
         Relationships: []
+      }
+      ai_insights_history: {
+        Row: {
+          created_at: string
+          dog_id: string
+          id: string
+          insights: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          id?: string
+          insights: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          id?: string
+          insights?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_history_dog_id_fkey"
+            columns: ["dog_id"]
+            isOneToOne: false
+            referencedRelation: "dogs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dog_breed_reference: {
         Row: {
@@ -130,6 +195,66 @@ export type Database = {
           photo_url?: string | null
           size?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      favorite_meal_items: {
+        Row: {
+          created_at: string
+          favorite_meal_id: string
+          food_id: string
+          grams: number
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          favorite_meal_id: string
+          food_id: string
+          grams?: number
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          favorite_meal_id?: string
+          food_id?: string
+          grams?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_meal_items_favorite_meal_id_fkey"
+            columns: ["favorite_meal_id"]
+            isOneToOne: false
+            referencedRelation: "favorite_meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorite_meal_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favorite_meals: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
           user_id?: string
         }
         Relationships: []
@@ -351,6 +476,60 @@ export type Database = {
           },
         ]
       }
+      plan_limits: {
+        Row: {
+          created_at: string
+          has_activity_recommendations: boolean
+          has_advanced_alerts: boolean
+          has_ai_features: boolean
+          has_charts: boolean
+          has_favorites: boolean
+          has_multi_profile: boolean
+          has_pdf_export: boolean
+          has_recipes: boolean
+          has_weight_history: boolean
+          id: string
+          max_dogs: number
+          max_history_days: number
+          max_meals_per_day: number
+          plan_type: string
+        }
+        Insert: {
+          created_at?: string
+          has_activity_recommendations?: boolean
+          has_advanced_alerts?: boolean
+          has_ai_features?: boolean
+          has_charts?: boolean
+          has_favorites?: boolean
+          has_multi_profile?: boolean
+          has_pdf_export?: boolean
+          has_recipes?: boolean
+          has_weight_history?: boolean
+          id?: string
+          max_dogs?: number
+          max_history_days?: number
+          max_meals_per_day?: number
+          plan_type: string
+        }
+        Update: {
+          created_at?: string
+          has_activity_recommendations?: boolean
+          has_advanced_alerts?: boolean
+          has_ai_features?: boolean
+          has_charts?: boolean
+          has_favorites?: boolean
+          has_multi_profile?: boolean
+          has_pdf_export?: boolean
+          has_recipes?: boolean
+          has_weight_history?: boolean
+          id?: string
+          max_dogs?: number
+          max_history_days?: number
+          max_meals_per_day?: number
+          plan_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -370,6 +549,223 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recipe_items: {
+        Row: {
+          created_at: string
+          food_id: string
+          grams: number
+          id: string
+          recipe_id: string
+        }
+        Insert: {
+          created_at?: string
+          food_id: string
+          grams?: number
+          id?: string
+          recipe_id: string
+        }
+        Update: {
+          created_at?: string
+          food_id?: string
+          grams?: number
+          id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          servings: number | null
+          total_grams: number | null
+          total_kcal: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          servings?: number | null
+          total_grams?: number | null
+          total_kcal?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          servings?: number | null
+          total_grams?: number | null
+          total_kcal?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          dog_id: string | null
+          enabled: boolean
+          id: string
+          time: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          dog_id?: string | null
+          enabled?: boolean
+          id?: string
+          time: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          dog_id?: string | null
+          enabled?: boolean
+          id?: string
+          time?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_dog_id_fkey"
+            columns: ["dog_id"]
+            isOneToOne: false
+            referencedRelation: "dogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_activity_date: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_type: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           user_id?: string
         }

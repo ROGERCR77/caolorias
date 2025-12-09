@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Dog, Heart, Info } from "lucide-react";
 
 export const Footer = () => {
@@ -11,16 +12,23 @@ export const Footer = () => {
               <span className="font-bold text-lg">Cãolorias</span>
             </div>
             
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              Feito com <Heart className="w-4 h-4 text-destructive" /> para tutores e seus cães
-            </p>
+            <div className="flex items-center gap-4 text-sm">
+              <Link to="/termos" className="text-muted-foreground hover:text-foreground transition-colors">
+                Termos de Uso
+              </Link>
+              <Link to="/privacidade" className="text-muted-foreground hover:text-foreground transition-colors">
+                Privacidade
+              </Link>
+              <Link to="/publicidade" className="text-muted-foreground hover:text-foreground transition-colors">
+                Publicidade
+              </Link>
+            </div>
             
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Cãolorias. Todos os direitos reservados.
+              © {new Date().getFullYear()} Cãolorias
             </p>
           </div>
           
-          {/* Disclaimer */}
           <div className="flex items-center justify-center gap-2 pt-4 border-t">
             <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <p className="text-xs text-muted-foreground text-center">
