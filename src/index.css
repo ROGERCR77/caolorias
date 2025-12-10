@@ -188,6 +188,27 @@
   .keyboard-aware {
     transition: padding-bottom 0.2s ease-out;
   }
+  
+  /* Keyboard-aware form containers */
+  .keyboard-scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+  
+  /* Focus scroll behavior - ensures inputs scroll into view on iOS */
+  input:focus, 
+  textarea:focus, 
+  select:focus,
+  [contenteditable]:focus {
+    scroll-margin-top: 120px;
+    scroll-margin-bottom: 200px;
+  }
+  
+  /* Form container that adapts to keyboard */
+  .form-keyboard-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 120px);
+  }
 }
 
 @layer utilities {

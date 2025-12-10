@@ -168,13 +168,13 @@ const Foods = () => {
                   Adicionar
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md bg-card">
-                <DialogHeader>
+              <DialogContent className="sm:max-w-md bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>
                     {editingFood ? "Editar alimento" : "Adicionar alimento"}
                   </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 pb-[100px]">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome do alimento *</Label>
                     <Input

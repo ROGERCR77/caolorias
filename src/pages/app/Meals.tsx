@@ -330,11 +330,11 @@ const Meals = () => {
 
         {/* New Meal Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-lg bg-card max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-lg bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Registrar refeição</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 pb-[100px]">
               {/* Help text */}
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
                 <Info className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
