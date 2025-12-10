@@ -18,7 +18,7 @@ const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/80", className)} {...props} />
+  <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/60 backdrop-blur-sm", className)} {...props} />
 ));
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
@@ -31,20 +31,27 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-3xl border bg-background",
+        "max-h-[85dvh]",
         className,
       )}
+      style={{
+        paddingBottom: 'max(24px, calc(var(--safe-area-inset-bottom) + 16px))',
+      }}
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
+      {/* Drag indicator */}
+      <div className="mx-auto mt-4 mb-2 h-1.5 w-12 rounded-full bg-muted-foreground/30 flex-shrink-0" />
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4">
+        {children}
+      </div>
     </DrawerPrimitive.Content>
   </DrawerPortal>
 ));
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("grid gap-1.5 p-4 text-center sm:text-left", className)} {...props} />
+  <div className={cn("grid gap-2 p-4 text-center sm:text-left", className)} {...props} />
 );
 DrawerHeader.displayName = "DrawerHeader";
 
@@ -59,7 +66,7 @@ const DrawerTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-lg font-bold leading-none tracking-tight", className)}
     {...props}
   />
 ));

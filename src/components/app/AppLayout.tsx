@@ -261,7 +261,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             <SheetContent 
               side="bottom" 
               className="rounded-t-3xl border-t-0 bg-card/98 backdrop-blur-xl"
-              style={{ paddingBottom: 'max(20px, var(--safe-area-inset-bottom))' }}
             >
               <SheetHeader className="pb-4">
                 <SheetTitle className="text-center text-lg font-bold">Mais opções</SheetTitle>

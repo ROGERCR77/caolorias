@@ -6,11 +6,15 @@
 
 @layer base {
   :root {
-    /* Safe area insets for mobile */
+    /* Safe area insets for iOS - with fallbacks */
     --safe-area-inset-top: env(safe-area-inset-top, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    
+    /* Minimum safe padding for iOS status bar */
+    --min-safe-top: max(24px, var(--safe-area-inset-top));
+    --min-safe-bottom: max(8px, var(--safe-area-inset-bottom));
 
     /* Cãolorias Color Palette - Warm, friendly, nature-inspired */
     --background: 45 30% 98%;
@@ -134,6 +138,8 @@
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    /* Use dynamic viewport height for iOS Safari */
+    height: -webkit-fill-available;
   }
 
   body {
@@ -142,6 +148,9 @@
     overscroll-behavior: contain;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Ensure body fills available space */
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 
   /* Prevent zoom on input focus in iOS */
@@ -151,11 +160,11 @@
 
   /* Safe area utilities */
   .safe-top {
-    padding-top: var(--safe-area-inset-top);
+    padding-top: var(--min-safe-top);
   }
   
   .safe-bottom {
-    padding-bottom: var(--safe-area-inset-bottom);
+    padding-bottom: var(--min-safe-bottom);
   }
 
   .safe-left {
@@ -164,6 +173,20 @@
 
   .safe-right {
     padding-right: var(--safe-area-inset-right);
+  }
+
+  /* Padding with safe area for content areas */
+  .pb-safe {
+    padding-bottom: max(20px, var(--safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(16px, var(--safe-area-inset-top));
+  }
+
+  /* iOS keyboard handling */
+  .keyboard-aware {
+    transition: padding-bottom 0.2s ease-out;
   }
 }
 
