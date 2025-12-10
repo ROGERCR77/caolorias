@@ -17,7 +17,7 @@ export default function HowToUse() {
     {
       icon: UserCheck,
       title: "Conta de Teste",
-      description: "Usuário: test@caolorias.com — Senha: Caolorias123"
+      description: "Usuário: contatorogerbrenda@gmail.com — Senha: Rogercr77@"
     },
     {
       icon: Server,
