@@ -1,78 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
-   <Group
-      location = "group:App"
-      name = "App">
-      <FileRef
-         location = "group:Assets.xcassets">
-      </FileRef>
-      <Group
-         location = "group:Base.lproj"
-         name = "Base.lproj">
-         <FileRef
-            location = "group:LaunchScreen.storyboard">
-         </FileRef>
-         <FileRef
-            location = "group:Main.storyboard">
-         </FileRef>
-      </Group>
-      <FileRef
-         location = "group:config.xml">
-      </FileRef>
-      <Group
-         location = "group:public"
-         name = "public">
-         <FileRef
-            location = "group:favicon.ico">
-         </FileRef>
-         <FileRef
-            location = "group:index.html">
-         </FileRef>
-         <FileRef
-            location = "group:cordova.js">
-         </FileRef>
-         <FileRef
-            location = "group:cordova_plugins.js">
-         </FileRef>
-         <FileRef
-            location = "group:robots.txt">
-         </FileRef>
-         <Group
-            location = "group:assets"
-            name = "assets">
-            <FileRef
-               location = "group:hero-dog-WiN2-d7Y.png">
-            </FileRef>
-            <FileRef
-               location = "group:index-CmjqvfYq.js">
-            </FileRef>
-            <FileRef
-               location = "group:index-BF8sKK0k.css">
-            </FileRef>
-         </Group>
-         <FileRef
-            location = "group:placeholder.svg">
-         </FileRef>
-      </Group>
-      <FileRef
-         location = "group:capacitor.config.json">
-      </FileRef>
-      <FileRef
-         location = "group:AppDelegate.swift">
-      </FileRef>
-      <FileRef
-         location = "group:Info.plist">
-      </FileRef>
-   </Group>
    <FileRef
       location = "group:App.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:App.xcworkspace">
-   </FileRef>
-   <FileRef
-      location = "group:Podfile">
    </FileRef>
    <FileRef
       location = "group:Pods/Pods.xcodeproj">
