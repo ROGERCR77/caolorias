@@ -416,14 +416,14 @@ export default function DigestiveHealth() {
                   Registrar Cocô
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Registrar Cocô de {selectedDog?.name}</DialogTitle>
                   <DialogDescription>
                     Registre textura, cor e outras características
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 py-4 pb-[100px]">
                   {/* Texture */}
                   <div>
                     <p className="text-sm font-medium mb-2">Textura</p>
@@ -545,14 +545,14 @@ export default function DigestiveHealth() {
                   Registrar Sintomas
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Registrar Sintomas de {selectedDog?.name}</DialogTitle>
                   <DialogDescription>
                     Selecione os sintomas observados e a gravidade
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 py-4 pb-[100px]">
                   {/* Symptoms */}
                   <div>
                     <p className="text-sm font-medium mb-2">O que está acontecendo?</p>
@@ -670,14 +670,14 @@ export default function DigestiveHealth() {
                   Registrar Energia
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
+              <DialogContent className="max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Como está {selectedDog?.name} hoje?</DialogTitle>
                   <DialogDescription>
                     Registre o nível de energia do seu cão
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 py-4 pb-[100px]">
                   {/* Energy Level */}
                   <div className="space-y-2">
                     {ENERGY_LEVELS.map(e => (

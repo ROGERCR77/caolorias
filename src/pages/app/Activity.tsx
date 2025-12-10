@@ -261,14 +261,14 @@ export default function Activity() {
               Registrar Atividade
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Nova Atividade</DialogTitle>
               <DialogDescription>
                 Registre a atividade física de {selectedDog?.name}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 py-4 pb-[100px]">
               {/* Type */}
               <div>
                 <p className="text-sm font-medium mb-2">Tipo</p>
