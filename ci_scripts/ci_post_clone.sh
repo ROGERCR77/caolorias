@@ -1,16 +1,19 @@
 #!/bin/sh
 set -e
 
-# Ir para a raiz do repositório clonado pelo Xcode Cloud
+echo ">>> [CI] Post-clone script running..."
+
+# Vai pra raiz do repositório do Xcode Cloud
 cd "$CI_WORKSPACE"
 
-# 1) Instalar dependências Node (onde fica @capacitor/ios)
-if [ -f package-lock.json ]; then
-  npm ci
-else
-  npm install
-fi
+echo ">>> [CI] Current workspace: $(pwd)"
 
-# 2) Ir para o projeto iOS e instalar os Pods
+# Entra na pasta do projeto iOS
 cd ios/App
-pod install
+
+echo ">>> [CI] Inside iOS folder: $(pwd)"
+echo ">>> [CI] Running pod install..."
+
+pod install --repo-update
+
+echo ">>> [CI] pod install finished."
