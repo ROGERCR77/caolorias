@@ -331,7 +331,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
               {/* About Section */}
               <div className="mt-4 pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground mb-3 text-center">Sobre o App</p>
+                <p className="text-xs text-foreground/70 font-medium mb-3 text-center">Sobre o App</p>
                 <div className="flex gap-2">
                   {aboutItems.map((item) => {
                     const isActive = location.pathname === item.path;
@@ -343,11 +343,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                           "flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl transition-all duration-200 press-effect",
                           isActive 
                             ? "bg-primary/15 text-primary" 
-                            : "bg-muted/40 hover:bg-muted/60 text-muted-foreground"
+                            : "bg-card hover:bg-muted text-foreground"
                         )}
                       >
                         <item.icon className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">{item.label}</span>
+                        <span className="text-[10px] font-semibold">{item.label}</span>
                       </button>
                     );
                   })}
