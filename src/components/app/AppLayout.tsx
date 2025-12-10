@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, BarChart3 } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, BarChart3, AlertTriangle, HelpCircle, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,12 @@ const moreNavItems = [
 const quickActions = [
   { path: "/app/perfil", label: "Configurações", icon: Settings },
   { path: "/app/assinatura", label: "Assinatura", icon: Crown },
+];
+
+const aboutItems = [
+  { path: "/app/aviso-importante", label: "Aviso Importante", icon: AlertTriangle },
+  { path: "/app/como-usar", label: "Como Usar", icon: HelpCircle },
+  { path: "/app/privacidade-dados", label: "Privacidade", icon: Shield },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -140,6 +146,22 @@ export function AppLayout({ children }: AppLayoutProps) {
               <DropdownMenuItem asChild className="rounded-xl mx-1">
                 <Link to="/app/assinatura" className="flex items-center gap-2">
                   <Crown className="w-4 h-4" />Assinatura
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="rounded-xl mx-1">
+                <Link to="/app/aviso-importante" className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />Aviso Importante
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="rounded-xl mx-1">
+                <Link to="/app/como-usar" className="flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4" />Como Usar
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="rounded-xl mx-1">
+                <Link to="/app/privacidade-dados" className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />Privacidade
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -306,6 +328,31 @@ export function AppLayout({ children }: AppLayoutProps) {
                     </button>
                   );
                 })}
+              </div>
+
+              {/* About Section */}
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground mb-3 text-center">Sobre o App</p>
+                <div className="flex gap-2">
+                  {aboutItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => handleMoreNavClick(item.path)}
+                        className={cn(
+                          "flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl transition-all duration-200 press-effect",
+                          isActive 
+                            ? "bg-primary/15 text-primary" 
+                            : "bg-muted/40 hover:bg-muted/60 text-muted-foreground"
+                        )}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="text-[10px] font-medium">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </SheetContent>
           </Sheet>
