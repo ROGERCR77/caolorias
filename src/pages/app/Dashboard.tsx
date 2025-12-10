@@ -63,7 +63,7 @@ const Dashboard = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-12 flex flex-col items-center justify-center gap-4">
+        <div className="page-container flex flex-col items-center justify-center gap-items">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
             <Dog className="w-8 h-8 text-primary" />
           </div>
@@ -104,7 +104,7 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-4 space-y-4">
+      <div className="page-container page-content">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -117,9 +117,9 @@ const Dashboard = () => {
         </div>
 
         {selectedDog && (
-          <div className="space-y-3">
+            <div className="section-content">
             {/* Quick Stats Row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="card-grid-2">
               <Card variant="interactive" className="press-effect">
                 <Link to="/app/refeicoes">
                   <CardContent className="p-4">

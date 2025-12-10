@@ -77,7 +77,7 @@ const Subscription = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-6 flex items-center justify-center min-h-[50vh]">
+        <div className="page-container flex items-center justify-center min-h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -86,7 +86,7 @@ const Subscription = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6 space-y-6">
+      <div className="page-container page-content">
         <div>
           <h1 className="text-2xl font-bold">Assinatura</h1>
           <p className="text-muted-foreground">Gerencie seu plano do Cãolorias</p>

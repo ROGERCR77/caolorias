@@ -206,7 +206,7 @@ const Meals = () => {
   if (dataLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-8 flex items-center justify-center">
+        <div className="page-container flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -216,7 +216,7 @@ const Meals = () => {
   if (dogs.length === 0) {
     return (
       <AppLayout>
-        <div className="container px-4 py-8">
+        <div className="page-container">
           <Card variant="elevated" className="max-w-md mx-auto text-center">
             <CardContent className="pt-8 pb-8">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-light flex items-center justify-center">
@@ -241,8 +241,8 @@ const Meals = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6">
-        <div className="flex flex-col gap-4 mb-6">
+      <div className="page-container page-content">
+        <div className="flex flex-col gap-items">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Refeições</h1>
             <Button onClick={openNewMealDialog} variant="accent">

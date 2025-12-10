@@ -136,7 +136,7 @@ const Foods = () => {
   if (dataLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-8 flex items-center justify-center">
+        <div className="page-container flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -145,8 +145,8 @@ const Foods = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="page-container page-content">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-items">
           <h1 className="text-2xl font-bold">Alimentos</h1>
           <div className="flex gap-3">
             <Select value={filterCategory} onValueChange={setFilterCategory}>

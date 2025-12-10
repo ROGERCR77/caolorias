@@ -108,7 +108,7 @@ const Dogs = () => {
   if (dataLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-8 flex items-center justify-center">
+        <div className="page-container flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -117,8 +117,8 @@ const Dogs = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="page-container page-content">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Meus cães</h1>
           <Button 
             onClick={() => {
@@ -170,7 +170,7 @@ const Dogs = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="card-grid card-grid-sm-2 card-grid-lg-3">
             {dogs.map((dog) => (
               <Card key={dog.id} variant="interactive">
                 <CardHeader className="pb-2">

@@ -54,6 +54,16 @@
 
     --radius: 0.75rem;
 
+    /* Spacing System - Consistent app-wide spacing */
+    --spacing-page-x: 1rem;           /* 16px - Page horizontal padding */
+    --spacing-page-y: 1.5rem;         /* 24px - Page vertical padding */
+    --spacing-section: 1.5rem;        /* 24px - Space between major sections */
+    --spacing-card: 1rem;             /* 16px - Card internal padding */
+    --spacing-card-header: 1rem;      /* 16px - Card header padding */
+    --spacing-items: 0.75rem;         /* 12px - Space between list items */
+    --spacing-inline: 0.5rem;         /* 8px - Inline element spacing */
+    --spacing-tight: 0.25rem;         /* 4px - Tight spacing */
+
     /* Sidebar - Warm tones */
     --sidebar-background: 40 25% 97%;
     --sidebar-foreground: 25 30% 25%;
@@ -212,6 +222,53 @@
 }
 
 @layer utilities {
+  /* Page Layout Utilities */
+  .page-container {
+    @apply container;
+    padding-left: var(--spacing-page-x);
+    padding-right: var(--spacing-page-x);
+    padding-top: var(--spacing-page-y);
+    padding-bottom: var(--spacing-page-y);
+  }
+
+  .page-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-section);
+  }
+
+  .section-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-items);
+  }
+
+  .card-grid {
+    display: grid;
+    gap: var(--spacing-items);
+  }
+
+  .card-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-items);
+  }
+
+  @media (min-width: 640px) {
+    .card-grid-sm-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .card-grid-sm-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .card-grid-lg-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
   .text-gradient-hero {
     background: var(--gradient-hero);
     -webkit-background-clip: text;
