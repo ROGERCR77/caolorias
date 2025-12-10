@@ -3,20 +3,20 @@ set -euo pipefail
 
 echo "▶️ [Caolorias] Iniciando Pre-Xcodebuild..."
 
-# Descobre a raiz do repositório
+# Raiz do repo
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-echo "📁 Repo root: \$REPO_ROOT"
+echo "📁 Repo root: $REPO_ROOT"
 
-# Vai para a pasta iOS do Capacitor
-cd "\$REPO_ROOT/ios/App"
-echo "📂 Diretório atual: \$(pwd)"
+cd "$REPO_ROOT"
 
-# Rodar Pods
-if [ -f "Podfile" ]; then
-  echo "📦 Rodando 'pod install'..."
-  pod install
+echo "📦 Instalando dependências npm (se necessário)..."
+if [ -f "package-lock.json" ]; then
+  npm ci || npm install
 else
-  echo "⚠️ Nenhum Podfile encontrado em \$(pwd)."
+  npm install
 fi
 
-echo "✅ [Caolorias] Pre-Xcodebuild finalizado com sucesso."
+echo "🔗 Rodando 'npx cap sync ios'..."
+npx cap sync ios
+
+echo "✅ [Caolorias] Pre-Xcodebuild finalizado (npm + cap sync ios)."
