@@ -134,14 +134,14 @@ export const ReminderDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {reminder ? "Editar Lembrete" : "Novo Lembrete"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 py-4 pb-[100px]">
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
             <Input

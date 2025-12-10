@@ -49,15 +49,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background safe-top safe-bottom">
+    <div className="min-h-[100dvh] flex flex-col bg-background safe-top">
       {/* Decorative background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col justify-center px-6 py-12 relative z-10">
-        <div className="w-full max-w-sm mx-auto space-y-8">
+      {/* Main content - scrollable for keyboard */}
+      <main className="flex-1 overflow-y-auto keyboard-scroll-container px-6 py-8 relative z-10">
+        <div className="w-full max-w-sm mx-auto space-y-8 pt-8 pb-[200px]">
           {/* Logo & Header */}
           <div className="text-center space-y-4 animate-fade-in">
             <div className="inline-flex p-4 rounded-2xl bg-gradient-hero shadow-lg shadow-primary/20">
@@ -155,8 +155,8 @@ const Login = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="py-6 text-center text-xs text-muted-foreground safe-bottom">
+      {/* Footer - fixed at bottom */}
+      <footer className="sticky bottom-0 py-4 text-center text-xs text-muted-foreground bg-background/80 backdrop-blur-sm safe-bottom">
         <Link to="/" className="hover:text-foreground transition-colors">
           ← Voltar para o site
         </Link>
