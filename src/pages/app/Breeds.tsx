@@ -124,7 +124,7 @@ const Breeds = () => {
 
         {/* Detail Modal */}
         <Dialog open={!!selectedBreed} onOpenChange={() => setSelectedBreed(null)}>
-          <DialogContent className="sm:max-w-md bg-card">
+          <DialogContent className="sm:max-w-md bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] overflow-y-auto">
             {selectedBreed && (
               <>
                 <DialogHeader>
