@@ -12,5 +12,5 @@ else
 fi
 
 # 2) Ir para o projeto iOS e instalar os Pods
-cd iOS/App
+cd ios/App
 pod install
