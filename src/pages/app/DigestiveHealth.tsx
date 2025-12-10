@@ -368,7 +368,7 @@ export default function DigestiveHealth() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 pb-24 px-4 py-4">
+      <div className="page-container page-content pb-24">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

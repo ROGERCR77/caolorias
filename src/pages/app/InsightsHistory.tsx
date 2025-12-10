@@ -75,7 +75,7 @@ const InsightsHistory = () => {
   if (!isPremium) {
     return (
       <AppLayout>
-        <div className="container px-4 py-6">
+        <div className="page-container">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Crown className="w-10 h-10 text-primary" />
@@ -98,7 +98,7 @@ const InsightsHistory = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-6 flex items-center justify-center min-h-[50vh]">
+        <div className="page-container flex items-center justify-center min-h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -107,7 +107,7 @@ const InsightsHistory = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6 space-y-6">
+      <div className="page-container page-content">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Lightbulb className="w-6 h-6" />

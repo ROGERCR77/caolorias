@@ -84,6 +84,20 @@ export default {
         xl: "calc(var(--radius) + 4px)",
         "2xl": "calc(var(--radius) + 8px)",
       },
+      spacing: {
+        'page': 'var(--spacing-page-x)',
+        'page-y': 'var(--spacing-page-y)',
+        'section': 'var(--spacing-section)',
+        'card': 'var(--spacing-card)',
+        'items': 'var(--spacing-items)',
+        'inline': 'var(--spacing-inline)',
+        'tight': 'var(--spacing-tight)',
+      },
+      gap: {
+        'section': 'var(--spacing-section)',
+        'items': 'var(--spacing-items)',
+        'inline': 'var(--spacing-inline)',
+      },
       boxShadow: {
         'sm': 'var(--shadow-sm)',
         'md': 'var(--shadow-md)',

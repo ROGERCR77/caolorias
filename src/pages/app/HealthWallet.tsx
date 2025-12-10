@@ -117,7 +117,7 @@ export default function HealthWallet() {
   if (!isPremium) {
     return (
       <AppLayout>
-        <div className="container px-4 py-6">
+        <div className="page-container">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Crown className="w-10 h-10 text-primary" />
@@ -259,7 +259,7 @@ export default function HealthWallet() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 pb-24 px-4 py-4">
+      <div className="page-container page-content pb-24">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

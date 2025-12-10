@@ -50,7 +50,7 @@ const Breeds = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="container px-4 py-8 flex items-center justify-center">
+        <div className="page-container flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </AppLayout>
@@ -59,8 +59,8 @@ const Breeds = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6">
-        <div className="mb-6">
+      <div className="page-container page-content">
+        <div>
           <h1 className="text-2xl font-bold mb-2">Referências de Raças</h1>
           <p className="text-muted-foreground text-sm">
             Consulte informações sobre peso típico e nível de energia das principais raças

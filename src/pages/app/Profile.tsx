@@ -49,7 +49,7 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="container px-4 py-6 space-y-6 max-w-lg">
+      <div className="page-container page-content max-w-lg">
         <div>
           <h1 className="text-2xl font-bold">Meu Perfil</h1>
           <p className="text-muted-foreground">Gerencie suas informações e lembretes</p>
