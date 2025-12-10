@@ -38,14 +38,14 @@ export function ResponsiveDialog({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className={cn("max-h-[85vh]", className)}>
+        <DrawerContent className={cn("max-h-[85dvh]", className)}>
           {(title || description) && (
             <DrawerHeader className="text-left pb-2">
               {title && <DrawerTitle>{title}</DrawerTitle>}
               {description && <DrawerDescription>{description}</DrawerDescription>}
             </DrawerHeader>
           )}
-          <div className="overflow-y-auto flex-1 px-4 pb-safe">
+          <div className="overflow-y-auto flex-1 px-4 pb-4">
             {children}
           </div>
         </DrawerContent>
@@ -55,7 +55,7 @@ export function ResponsiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("sm:max-w-lg bg-card max-h-[90vh] overflow-y-auto", className)}>
+      <DialogContent className={cn("sm:max-w-lg bg-card", className)}>
         {(title || description) && (
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}
