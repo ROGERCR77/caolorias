@@ -12,6 +12,80 @@ interface IAPReceiptRequest {
   product_id?: string;
 }
 
+interface AppleReceiptInfo {
+  product_id: string;
+  expires_date_ms: string;
+  purchase_date_ms: string;
+  original_transaction_id: string;
+  transaction_id: string;
+}
+
+interface AppleValidationResponse {
+  status: number;
+  latest_receipt_info?: AppleReceiptInfo[];
+  receipt?: {
+    bundle_id: string;
+    in_app?: AppleReceiptInfo[];
+  };
+  environment?: 'Sandbox' | 'Production';
+}
+
+// Validate receipt with Apple servers
+async function validateAppleReceipt(receiptData: string, sharedSecret: string): Promise<AppleValidationResponse> {
+  const productionUrl = 'https://buy.itunes.apple.com/verifyReceipt';
+  const sandboxUrl = 'https://sandbox.itunes.apple.com/verifyReceipt';
+  
+  const payload = {
+    'receipt-data': receiptData,
+    'password': sharedSecret,
+    'exclude-old-transactions': true
+  };
+
+  console.log('Validating receipt with Apple production server...');
+  
+  // Try production first
+  let response = await fetch(productionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  
+  let result: AppleValidationResponse = await response.json();
+  console.log('Apple production response status:', result.status);
+  
+  // Status 21007 means receipt is from sandbox, redirect to sandbox server
+  if (result.status === 21007) {
+    console.log('Receipt is from sandbox, redirecting to sandbox server...');
+    response = await fetch(sandboxUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    result = await response.json();
+    console.log('Apple sandbox response status:', result.status);
+  }
+  
+  return result;
+}
+
+// Get human-readable error message for Apple status codes
+function getAppleErrorMessage(status: number): string {
+  const errorMessages: Record<number, string> = {
+    21000: 'The App Store could not read the JSON object you provided.',
+    21002: 'The data in the receipt-data property was malformed or missing.',
+    21003: 'The receipt could not be authenticated.',
+    21004: 'The shared secret you provided does not match the shared secret on file.',
+    21005: 'The receipt server is not currently available.',
+    21006: 'This receipt is valid but the subscription has expired.',
+    21007: 'This receipt is from the test environment (sandbox).',
+    21008: 'This receipt is from the production environment.',
+    21009: 'Internal data access error.',
+    21010: 'The user account cannot be found or has been deleted.',
+  };
+  
+  return errorMessages[status] || `Unknown Apple error (status: ${status})`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -61,32 +135,107 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Validating ${platform} receipt for user ${user.id}`);
+    console.log(`Validating ${platform} receipt for user ${user.id}, product: ${product_id || 'not specified'}`);
 
-    // TODO: Implement actual receipt validation with Apple/Google servers
-    // Apple: POST to https://buy.itunes.apple.com/verifyReceipt (production)
-    //        or https://sandbox.itunes.apple.com/verifyReceipt (sandbox)
-    // Google: Use Google Play Developer API
-    
-    // For now, we'll trust the receipt and update the subscription
-    // In production, you MUST validate with Apple/Google before granting access!
-    
-    const isApple = platform === 'apple';
-    const planSource = isApple ? 'appstore' : 'playstore';
-    
-    // Calculate subscription period (default 30 days for monthly)
+    let isValid = false;
+    let periodEnd: Date | null = null;
+    let periodStart: Date | null = null;
+    let planSource = '';
+    let environment = '';
+
+    if (platform === 'apple') {
+      const appleSharedSecret = Deno.env.get('APPLE_SHARED_SECRET');
+      
+      if (!appleSharedSecret) {
+        console.error('APPLE_SHARED_SECRET not configured');
+        return new Response(
+          JSON.stringify({ error: 'Apple shared secret not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const appleResult = await validateAppleReceipt(receipt_data, appleSharedSecret);
+      
+      console.log('Apple validation result:', {
+        status: appleResult.status,
+        environment: appleResult.environment,
+        hasLatestReceiptInfo: !!appleResult.latest_receipt_info,
+        receiptInfoCount: appleResult.latest_receipt_info?.length || 0
+      });
+
+      // Status 0 = valid, Status 21006 = valid but expired
+      if (appleResult.status === 0 || appleResult.status === 21006) {
+        const latestReceiptInfo = appleResult.latest_receipt_info;
+        
+        if (latestReceiptInfo && latestReceiptInfo.length > 0) {
+          // Sort by expires_date_ms descending to get the most recent transaction
+          const sortedReceipts = [...latestReceiptInfo].sort(
+            (a, b) => parseInt(b.expires_date_ms) - parseInt(a.expires_date_ms)
+          );
+          
+          const latestTransaction = sortedReceipts[0];
+          
+          console.log('Latest transaction:', {
+            product_id: latestTransaction.product_id,
+            expires_date_ms: latestTransaction.expires_date_ms,
+            transaction_id: latestTransaction.transaction_id
+          });
+          
+          const expiresDateMs = parseInt(latestTransaction.expires_date_ms);
+          const purchaseDateMs = parseInt(latestTransaction.purchase_date_ms);
+          
+          periodEnd = new Date(expiresDateMs);
+          periodStart = new Date(purchaseDateMs);
+          
+          // Check if subscription is currently active
+          isValid = periodEnd > new Date();
+          planSource = 'appstore';
+          environment = appleResult.environment || 'Production';
+          
+          console.log(`Subscription status: ${isValid ? 'ACTIVE' : 'EXPIRED'}, expires: ${periodEnd.toISOString()}, environment: ${environment}`);
+        } else {
+          console.error('No receipt info found in Apple response');
+          return new Response(
+            JSON.stringify({ error: 'No subscription information found in receipt' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        const errorMessage = getAppleErrorMessage(appleResult.status);
+        console.error(`Apple validation failed: ${errorMessage}`);
+        return new Response(
+          JSON.stringify({ error: errorMessage, apple_status: appleResult.status }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (platform === 'google') {
+      // TODO: Implement Google Play validation
+      // For now, return an error
+      console.error('Google Play validation not yet implemented');
+      return new Response(
+        JSON.stringify({ error: 'Google Play validation not yet implemented' }),
+        { status: 501, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Invalid platform. Must be "apple" or "google"' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update user subscription based on validation result
     const now = new Date();
-    const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const subscriptionStatus = isValid ? 'active' : 'expired';
+    const planType = isValid ? 'premium' : 'free';
 
-    // Update user subscription
     const { data: subscription, error: updateError } = await supabaseClient
       .from('user_subscriptions')
       .update({
-        plan_type: 'premium',
-        subscription_status: 'active',
+        plan_type: planType,
+        subscription_status: subscriptionStatus,
         plan_source: planSource,
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
+        current_period_start: periodStart?.toISOString() || now.toISOString(),
+        current_period_end: periodEnd?.toISOString() || now.toISOString(),
         updated_at: now.toISOString(),
       })
       .eq('user_id', user.id)
@@ -101,15 +250,18 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Successfully activated ${planSource} subscription for user ${user.id}`);
+    console.log(`Successfully updated subscription for user ${user.id}: ${planType} (${subscriptionStatus}) via ${planSource}`);
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
+        success: true,
+        valid: isValid,
+        environment,
         subscription: {
           plan_type: subscription.plan_type,
           plan_source: subscription.plan_source,
           subscription_status: subscription.subscription_status,
+          current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
         }
       }),
