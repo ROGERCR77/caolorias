@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dog, Loader2, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlatform } from "@/hooks/usePlatform";
 
 const AppleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -22,6 +23,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signIn, signInWithApple } = useAuth();
+  const { isIOS } = usePlatform();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,34 +92,38 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Apple Sign-In Button */}
-          <div className="animate-slide-up">
-            <Button
-              type="button"
-              onClick={handleAppleSignIn}
-              disabled={isAppleLoading || isLoading}
-              className="w-full h-14 text-base rounded-xl bg-foreground text-background hover:bg-foreground/90"
-            >
-              {isAppleLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <AppleIcon />
-                  <span className="ml-2">Continuar com Apple</span>
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Apple Sign-In Button - Only on iOS */}
+          {isIOS && (
+            <div className="animate-slide-up">
+              <Button
+                type="button"
+                onClick={handleAppleSignIn}
+                disabled={isAppleLoading || isLoading}
+                className="w-full h-14 text-base rounded-xl bg-foreground text-background hover:bg-foreground/90"
+              >
+                {isAppleLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <AppleIcon />
+                    <span className="ml-2">Continuar com Apple</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+          {/* Divider - Only show if Apple button is visible */}
+          {isIOS && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-3 text-muted-foreground">ou use e-mail</span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">ou use e-mail</span>
-            </div>
-          </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5 animate-slide-up">
