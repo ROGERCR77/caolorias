@@ -157,18 +157,6 @@ const Subscription = () => {
                 </Button>
               )}
 
-              <Button 
-                variant="outline" 
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Verificar status
-              </Button>
 
               {isNativePlatform && (
                 <Button 
