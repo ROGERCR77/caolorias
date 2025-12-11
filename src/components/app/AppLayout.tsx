@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, BarChart3, AlertTriangle, HelpCircle, Shield } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, BarChart3, AlertTriangle, HelpCircle, Shield, Library } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ const aboutItems = [
   { path: "/app/aviso-importante", label: "Aviso Importante", icon: AlertTriangle },
   { path: "/app/como-usar", label: "Como Usar", icon: HelpCircle },
   { path: "/app/privacidade-dados", label: "Privacidade", icon: Shield },
+  { path: "/app/referencias", label: "Referências", icon: Library },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

@@ -35,6 +35,7 @@ import VetReport from "./pages/app/VetReport";
 import ImportantNotice from "./pages/app/ImportantNotice";
 import HowToUse from "./pages/app/HowToUse";
 import DataPrivacy from "./pages/app/DataPrivacy";
+import References from "./pages/app/References";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
                   <Route path="/app/aviso-importante" element={<ProtectedRoute><ImportantNotice /></ProtectedRoute>} />
                   <Route path="/app/como-usar" element={<ProtectedRoute><HowToUse /></ProtectedRoute>} />
                   <Route path="/app/privacidade-dados" element={<ProtectedRoute><DataPrivacy /></ProtectedRoute>} />
+                  <Route path="/app/referencias" element={<ProtectedRoute><References /></ProtectedRoute>} />
 
                   {/* Redirect /app to /app/hoje */}
                   <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
