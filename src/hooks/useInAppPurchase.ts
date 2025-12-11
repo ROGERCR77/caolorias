@@ -5,8 +5,7 @@ import { Capacitor } from "@capacitor/core";
 
 // Product IDs - configure these in App Store Connect / Google Play Console
 const PRODUCT_IDS = {
-  PREMIUM_MONTHLY: "caolorias_premium_monthly",
-  PREMIUM_YEARLY: "caolorias_premium_yearly",
+  PREMIUM_MONTHLY: "caolorias_premium_1month",
 };
 
 interface IAPProduct {
@@ -70,11 +69,6 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
         store.register([
           {
             id: PRODUCT_IDS.PREMIUM_MONTHLY,
-            type: ProductType.PAID_SUBSCRIPTION,
-            platform: platformId,
-          },
-          {
-            id: PRODUCT_IDS.PREMIUM_YEARLY,
             type: ProductType.PAID_SUBSCRIPTION,
             platform: platformId,
           },

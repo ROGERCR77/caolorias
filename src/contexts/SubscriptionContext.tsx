@@ -44,8 +44,7 @@ const PREMIUM_FEATURES = [
 ];
 
 const PRODUCT_IDS = {
-  PREMIUM_MONTHLY: "caolorias_premium_monthly",
-  PREMIUM_YEARLY: "caolorias_premium_yearly",
+  PREMIUM_MONTHLY: "caolorias_premium_1month",
 };
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
