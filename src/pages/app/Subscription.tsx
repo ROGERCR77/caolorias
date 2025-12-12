@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, Smartphone, RotateCcw } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -151,9 +151,10 @@ const Subscription = () => {
                 <Button 
                   onClick={() => startInAppSubscription()} 
                   className="flex-1"
+                  size="lg"
                 >
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Assinar pelo app
+                  <Crown className="w-4 h-4 mr-2" />
+                  Assinar Premium - R$ 39,90/mês
                 </Button>
               )}
 
