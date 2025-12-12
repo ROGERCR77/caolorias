@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Caolorias</string>
+	<string>Caolorias</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,5 +45,14 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>UIBackgroundModes
+UIBackgroundModes
+UIBackgroundModes</key>
+	<array>
+		<string>remote-notification
+remote-notification
+remote-notification
+remote-notification</string>
+	</array>
 </dict>
 </plist>
