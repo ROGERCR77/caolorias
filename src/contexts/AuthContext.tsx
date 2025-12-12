@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useOneSignal } from "@/hooks/useOneSignal";
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { setExternalUserId, removeExternalUserId } = useOneSignal();
+  const lastLinkedUserId = useRef<string | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -26,6 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+
+        // Link/unlink OneSignal user
+        if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
+          lastLinkedUserId.current = session.user.id;
+          setTimeout(() => setExternalUserId(session.user.id), 0);
+        } else if (!session?.user && lastLinkedUserId.current) {
+          lastLinkedUserId.current = null;
+          setTimeout(() => removeExternalUserId(), 0);
+        }
       }
     );
 
@@ -34,10 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+
+      if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
+        lastLinkedUserId.current = session.user.id;
+        setTimeout(() => setExternalUserId(session.user.id), 0);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setExternalUserId, removeExternalUserId]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -91,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    removeExternalUserId();
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
   };
