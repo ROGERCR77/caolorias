@@ -1,6 +1,4 @@
 import { useEffect } from "react";
-// @ts-ignore
-import OneSignal from "onesignal-cordova-plugin";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,18 +41,46 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+let didInit = false;
+
 const App = () => {
   useEffect(() => {
-    try {
+    const init = () => {
+      if (didInit) return;
+
       // @ts-ignore
-      OneSignal.setAppId("a44cb991-eb69-4375-b524-90e7d5036a4c");
-      // @ts-ignore
-      OneSignal.promptForPushNotificationsWithUserResponse((accepted: boolean) => {
-        console.log("Push permission accepted:", accepted);
-      });
-    } catch (e) {
-      console.log("OneSignal init error:", e);
-    }
+      const os = (window as any)?.plugins?.OneSignal;
+
+      console.log("OneSignal object:", os);
+
+      if (!os) {
+        console.log("OneSignal not ready yet");
+        return;
+      }
+
+      didInit = true;
+      console.log("Initializing OneSignal (once)");
+
+      try {
+        // init novo (v5)
+        os.initialize("a44cb991-eb69-4375-b524-90e7d5036a4c");
+
+        // pedir permissão (iOS)
+        os.Notifications.requestPermission(true).then((accepted: boolean) => {
+          console.log("Push permission accepted:", accepted);
+        });
+      } catch (e) {
+        console.log("OneSignal init error:", e);
+      }
+    };
+
+    document.addEventListener("deviceready", init, { once: true });
+    const t = setInterval(init, 500);
+
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("deviceready", init);
+    };
   }, []);
 
   return (
