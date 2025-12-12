@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useOneSignal } from "@/hooks/useOneSignal";
 
 // Types
 export type DogObjetivo = "manter_peso" | "perder_peso" | "ganhar_peso" | "alimentacao_saudavel";
@@ -187,6 +188,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { trackMealLogged, trackWeightLogged, sendTags, isNative } = useOneSignal();
   const [dogs, setDogs] = useState<Dog[]>([]);
   const [foods, setFoods] = useState<Food[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -280,6 +282,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Auto-select first dog
       if (typedDogs.length > 0 && !selectedDogId) {
         setSelectedDogId(typedDogs[0].id);
+      }
+
+      // Track last active for engagement notifications
+      if (isNative && typedDogs.length > 0) {
+        sendTags({
+          last_active_at: new Date().toISOString(),
+          dog_name: typedDogs[0].name
+        });
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -450,6 +460,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     if (updatedMeal) {
       setMeals((prev) => [updatedMeal, ...prev]);
+      
+      // Track meal in OneSignal for engagement notifications
+      const dog = dogs.find(d => d.id === meal.dog_id);
+      if (dog && isNative) {
+        trackMealLogged(dog.name);
+      }
     }
   };
 
@@ -479,6 +495,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     // Update dog's current weight
     await updateDog(log.dog_id, { current_weight_kg: log.weight_kg });
+
+    // Track weight in OneSignal for engagement notifications
+    const dog = dogs.find(d => d.id === log.dog_id);
+    if (dog && isNative) {
+      trackWeightLogged(dog.name, log.weight_kg);
+    }
   };
 
   const deleteWeightLog = async (id: string) => {
