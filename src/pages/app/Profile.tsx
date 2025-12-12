@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,14 +8,29 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Mail, Save } from "lucide-react";
+import { Loader2, User, Mail, Save, Trash2, AlertTriangle } from "lucide-react";
 import { ReminderSection } from "@/components/app/ReminderSection";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [name, setName] = useState(user?.user_metadata?.name || "");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +60,41 @@ const Profile = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "EXCLUIR") {
+      toast({
+        title: "Confirmação incorreta",
+        description: "Digite EXCLUIR para confirmar a exclusão.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const { error } = await supabase.rpc("delete_user");
+
+      if (error) throw error;
+
+      await signOut();
+      
+      toast({
+        title: "Conta excluída",
+        description: "Sua conta foi removida permanentemente.",
+      });
+
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir conta",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
     }
   };
 
@@ -129,6 +180,81 @@ const Profile = () => {
                 }
               </span>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Zona de Perigo
+            </CardTitle>
+            <CardDescription>
+              Ações irreversíveis para sua conta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir Minha Conta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                    Tem certeza?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-4">
+                      <p>
+                        Esta ação é <strong>permanente e irreversível</strong>. Todos os seus dados serão excluídos:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Perfil e configurações</li>
+                        <li>Dados dos cães</li>
+                        <li>Refeições e registros</li>
+                        <li>Histórico de peso e saúde</li>
+                        <li>Lembretes e preferências</li>
+                      </ul>
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="delete-confirm" className="text-foreground">
+                          Digite <strong>EXCLUIR</strong> para confirmar:
+                        </Label>
+                        <Input
+                          id="delete-confirm"
+                          value={deleteConfirmation}
+                          onChange={(e) => setDeleteConfirmation(e.target.value.toUpperCase())}
+                          placeholder="EXCLUIR"
+                          className="font-mono"
+                          disabled={isDeleting}
+                        />
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmation !== "EXCLUIR" || isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Excluindo...
+                      </>
+                    ) : (
+                      "Excluir Permanentemente"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       </div>
