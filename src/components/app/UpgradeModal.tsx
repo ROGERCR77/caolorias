@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Crown, X, Smartphone } from "lucide-react";
+import { Check, Crown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface UpgradeModalProps {
@@ -128,8 +128,8 @@ export function UpgradeModal({ open, onOpenChange, feature }: UpgradeModalProps)
           </div>
 
           <Button onClick={handleGoToSubscription} className="w-full" size="lg">
-            <Smartphone className="w-4 h-4 mr-2" />
-            Ir para Assinatura
+            <Crown className="w-4 h-4 mr-2" />
+            Assinar Premium
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
