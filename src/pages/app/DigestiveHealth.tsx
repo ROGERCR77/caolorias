@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { compressImage, formatFileSize } from "@/lib/imageCompression";
 import { 
   Loader2, 
   Plus, 
@@ -146,16 +147,25 @@ export default function DigestiveHealth() {
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
 
-  // Photo upload function
+  // Photo upload function with compression
   const uploadPhoto = async (file: File, folder: string): Promise<string | null> => {
     try {
       setUploadingPhoto(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user!.id}/${folder}/${Date.now()}.${fileExt}`;
+      
+      // Compress image before upload
+      const originalSize = file.size;
+      const compressedBlob = await compressImage(file, 1200, 0.8);
+      const compressedSize = compressedBlob.size;
+      
+      console.log(`Image compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${Math.round((1 - compressedSize / originalSize) * 100)}% reduction)`);
+      
+      const fileName = `${user!.id}/${folder}/${Date.now()}.jpg`;
       
       const { error: uploadError } = await supabase.storage
         .from('dog-photos')
-        .upload(fileName, file);
+        .upload(fileName, compressedBlob, {
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
