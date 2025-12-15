@@ -170,19 +170,53 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Arquivo inválido", description: "Selecione uma imagem.", variant: "destructive" });
+    // Verificar tamanho (máx 15MB)
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ 
+        title: "Foto muito grande", 
+        description: "Selecione uma foto menor que 15MB.",
+        variant: "destructive" 
+      });
       return;
     }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPhotoPreview(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    setPhotoFile(file);
+    // Validar tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    const isValidType = file.type.startsWith("image/") || validTypes.some(t => file.type.toLowerCase().includes(t.split('/')[1]));
+    
+    if (!isValidType) {
+      toast({ 
+        title: "Arquivo inválido", 
+        description: "Selecione uma foto JPG, PNG ou WebP.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    try {
+      // Criar preview usando FileReader (mais seguro em mobile)
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPhotoPreview(event.target?.result as string);
+      };
+      reader.onerror = () => {
+        console.error("FileReader error");
+        toast({ 
+          title: "Erro ao ler foto", 
+          description: "Tente selecionar outra imagem.",
+          variant: "destructive" 
+        });
+      };
+      reader.readAsDataURL(file);
+      setPhotoFile(file);
+    } catch (error) {
+      console.error("Photo select error:", error);
+      toast({ 
+        title: "Erro ao processar foto", 
+        description: "Tente novamente ou escolha outra foto.",
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleRemovePhoto = () => {
@@ -199,15 +233,35 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
 
     setIsUploadingPhoto(true);
     try {
-      // Compress image before upload
-      const compressedFile = await compressImage(photoFile, 800, 0.8);
+      let fileToUpload: Blob = photoFile;
+      let contentType = "image/jpeg";
+      
+      // Tentar comprimir a imagem
+      try {
+        const compressedFile = await compressImage(photoFile, 600, 0.7);
+        fileToUpload = compressedFile;
+        console.log("Image compressed successfully");
+      } catch (compressError) {
+        // Se a compressão falhar, usar arquivo original se for pequeno o suficiente
+        console.warn("Compression failed, using original:", compressError);
+        if (photoFile.size > 5 * 1024 * 1024) {
+          toast({ 
+            title: "Erro ao processar foto", 
+            description: "Tente uma foto menor ou em formato JPG/PNG.",
+            variant: "destructive" 
+          });
+          return formData.photo_url || null;
+        }
+        fileToUpload = photoFile;
+        contentType = photoFile.type || "image/jpeg";
+      }
       
       const fileExt = "jpg";
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("dog-photos")
-        .upload(fileName, compressedFile, { contentType: "image/jpeg", upsert: true });
+        .upload(fileName, fileToUpload, { contentType, upsert: true });
 
       if (uploadError) throw uploadError;
 

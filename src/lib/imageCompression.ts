@@ -1,55 +1,95 @@
 /**
  * Compress an image file before upload
  * @param file - The image file to compress
- * @param maxWidth - Maximum width (default 1200px)
- * @param quality - JPEG quality 0-1 (default 0.8)
+ * @param maxWidth - Maximum width (default 600px for mobile safety)
+ * @param quality - JPEG quality 0-1 (default 0.7)
  * @returns Compressed file as Blob
  */
 export async function compressImage(
   file: File,
-  maxWidth: number = 1200,
-  quality: number = 0.8
+  maxWidth: number = 600,
+  quality: number = 0.7
 ): Promise<Blob> {
+  // Check file size limit (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('Arquivo muito grande (máximo 10MB)');
+  }
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    let objectUrl: string | null = null;
 
-    img.onload = () => {
-      let { width, height } = img;
+    // Timeout de 30 segundos para evitar travamento
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout ao processar imagem'));
+    }, 30000);
 
-      // Calculate new dimensions maintaining aspect ratio
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
+    const cleanup = () => {
+      clearTimeout(timeout);
+      if (objectUrl) {
+        try {
+          URL.revokeObjectURL(objectUrl);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      // Draw and compress
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error('Failed to compress image'));
-          }
-        },
-        'image/jpeg',
-        quality
-      );
     };
 
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+
+        // Calculate new dimensions maintaining aspect ratio
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        if (!ctx) {
+          cleanup();
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+
+    img.onerror = () => {
+      cleanup();
+      reject(new Error('Falha ao carregar imagem'));
+    };
+
+    try {
+      objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+    } catch (error) {
+      cleanup();
+      reject(new Error('Erro ao processar arquivo de imagem'));
+    }
   });
 }
 
