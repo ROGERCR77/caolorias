@@ -45,14 +45,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>UIBackgroundModes
-UIBackgroundModes
-UIBackgroundModes</key>
+	<key>UIBackgroundModes</key>
 	<array>
-		<string>remote-notification
-remote-notification
-remote-notification
-remote-notification</string>
+		<string>remote-notification</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>O Cãolorias precisa acessar sua câmera para tirar fotos do seu cão e registros de saúde.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O Cãolorias precisa acessar suas fotos para adicionar imagens do seu cão e registros de saúde.</string>
 </dict>
 </plist>
