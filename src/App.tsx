@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
@@ -38,6 +39,8 @@ const ImportantNotice = lazy(() => import("./pages/app/ImportantNotice"));
 const HowToUse = lazy(() => import("./pages/app/HowToUse"));
 const DataPrivacy = lazy(() => import("./pages/app/DataPrivacy"));
 const References = lazy(() => import("./pages/app/References"));
+const Achievements = lazy(() => import("./pages/app/Achievements"));
+const ShoppingList = lazy(() => import("./pages/app/ShoppingList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -100,15 +103,16 @@ const App = () => {
 
   return (
     <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <DataProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Suspense fallback={<PageLoader />}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <DataProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* Public routes */}
                       <Route path="/" element={<Index />} />
@@ -139,6 +143,8 @@ const App = () => {
                       <Route path="/app/como-usar" element={<ProtectedRoute><HowToUse /></ProtectedRoute>} />
                       <Route path="/app/privacidade-dados" element={<ProtectedRoute><DataPrivacy /></ProtectedRoute>} />
                       <Route path="/app/referencias" element={<ProtectedRoute><References /></ProtectedRoute>} />
+                      <Route path="/app/conquistas" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+                      <Route path="/app/lista-compras" element={<ProtectedRoute><ShoppingList /></ProtectedRoute>} />
 
                       {/* Redirect /app to /app/hoje */}
                       <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
@@ -153,6 +159,7 @@ const App = () => {
           </SubscriptionProvider>
         </AuthProvider>
       </QueryClientProvider>
+      </ThemeProvider>
     </HelmetProvider>
   );
 };

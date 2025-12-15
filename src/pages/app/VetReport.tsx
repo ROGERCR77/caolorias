@@ -12,16 +12,18 @@ import { toast } from "sonner";
 import { format, subDays, parseISO, differenceInYears, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  Loader2, FileText, Download, Share2, Dog as DogIcon,
+  Loader2, FileText, Download, Dog as DogIcon,
   Scale, Utensils, Activity, Heart, Crown, Printer
 } from "lucide-react";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
+import jsPDF from "jspdf";
 
 export default function VetReport() {
   const { user } = useAuth();
   const { selectedDogId, dogs, meals, weightLogs, foods, isLoading: dataLoading } = useData();
   const { isPremium } = useSubscription();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [healthData, setHealthData] = useState<any>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -67,10 +69,170 @@ export default function VetReport() {
         intolerances: intolerancesRes.data || [],
       });
       
+      toast.success("Relatório gerado com sucesso!");
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Generate PDF
+  const generatePDF = async () => {
+    if (!isPremium) {
+      setShowUpgrade(true);
+      return;
+    }
+    
+    if (!selectedDog) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(74, 124, 89); // Primary color
+      doc.text("Cãolorias - Relatório Veterinário", margin, y);
+      y += 10;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(128, 128, 128);
+      doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, y);
+      y += 15;
+      
+      // Dog Info Section
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Dados do Pet", margin, y);
+      y += 8;
+      
+      doc.setFontSize(11);
+      doc.text(`Nome: ${selectedDog.name}`, margin, y);
+      y += 6;
+      doc.text(`Raça: ${selectedDog.breed || "SRD"}`, margin, y);
+      y += 6;
+      doc.text(`Idade: ${calculateAge(selectedDog.birth_date)}`, margin, y);
+      y += 6;
+      doc.text(`Peso Atual: ${selectedDog.current_weight_kg} kg`, margin, y);
+      y += 6;
+      doc.text(`Porte: ${selectedDog.size || "Não informado"}`, margin, y);
+      y += 6;
+      doc.text(`Tipo de Alimentação: ${selectedDog.feeding_type || "Natural"}`, margin, y);
+      y += 15;
+      
+      // Weight History
+      doc.setFontSize(14);
+      doc.text("Histórico de Peso (últimos 30 dias)", margin, y);
+      y += 8;
+      
+      const recentWeights = weightLogs
+        .filter(w => w.dog_id === selectedDogId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 5);
+      
+      doc.setFontSize(10);
+      if (recentWeights.length === 0) {
+        doc.text("Sem registros de peso", margin, y);
+        y += 6;
+      } else {
+        recentWeights.forEach(w => {
+          doc.text(`${format(parseISO(w.date), "dd/MM/yyyy")} - ${w.weight_kg} kg`, margin, y);
+          y += 5;
+        });
+      }
+      y += 10;
+      
+      // Feeding Summary
+      doc.setFontSize(14);
+      doc.text("Resumo Alimentar", margin, y);
+      y += 8;
+      
+      const recentMeals = meals
+        .filter(m => m.dog_id === selectedDogId)
+        .sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
+        .slice(0, 10);
+      
+      const avgMealKcal = recentMeals.length > 0 
+        ? Math.round(recentMeals.reduce((sum, m) => sum + (m.total_kcal_estimated || 0), 0) / recentMeals.length)
+        : 0;
+      
+      doc.setFontSize(10);
+      doc.text(`Meta diária: ${selectedDog.meta_kcal_dia || '-'} kcal`, margin, y);
+      y += 5;
+      doc.text(`Média consumida: ${avgMealKcal} kcal`, margin, y);
+      y += 5;
+      doc.text(`Objetivo: ${selectedDog.objetivo?.replace('_', ' ') || 'Não informado'}`, margin, y);
+      y += 5;
+      doc.text(`Refeições registradas: ${recentMeals.length} (últimos 30 dias)`, margin, y);
+      y += 15;
+      
+      // Health Data (if loaded)
+      if (healthData) {
+        // Intolerances
+        if (healthData.intolerances.length > 0) {
+          doc.setFontSize(14);
+          doc.text("Alergias/Intolerâncias", margin, y);
+          y += 8;
+          
+          doc.setFontSize(10);
+          healthData.intolerances.forEach((i: any) => {
+            const foodName = i.food_name || foods.find(f => f.id === i.food_id)?.name || "Desconhecido";
+            doc.text(`• ${foodName} (${i.reaction_type})`, margin, y);
+            y += 5;
+          });
+          y += 10;
+        }
+        
+        // Symptoms
+        if (healthData.symptoms.length > 0) {
+          doc.setFontSize(14);
+          doc.text("Sintomas Registrados (30 dias)", margin, y);
+          y += 8;
+          
+          doc.setFontSize(10);
+          healthData.symptoms.slice(0, 5).forEach((s: any) => {
+            doc.text(`${format(parseISO(s.logged_at), "dd/MM")} - ${s.symptoms?.join(', ')}`, margin, y);
+            y += 5;
+          });
+          y += 10;
+        }
+        
+        // Activity
+        if (healthData.activityLogs.length > 0) {
+          doc.setFontSize(14);
+          doc.text("Atividade Física (30 dias)", margin, y);
+          y += 8;
+          
+          const totalMinutes = healthData.activityLogs.reduce((sum: number, a: any) => sum + a.duration_minutes, 0);
+          doc.setFontSize(10);
+          doc.text(`Total de atividades: ${healthData.activityLogs.length}`, margin, y);
+          y += 5;
+          doc.text(`Tempo total: ${totalMinutes} minutos`, margin, y);
+          y += 15;
+        }
+      }
+      
+      // Footer
+      doc.setFontSize(9);
+      doc.setTextColor(128, 128, 128);
+      const footerY = doc.internal.pageSize.getHeight() - 20;
+      doc.text("Este relatório é apenas informativo e não substitui avaliação veterinária.", margin, footerY);
+      doc.text("Gerado pelo Cãolorias - caolorias.app", margin, footerY + 5);
+      
+      // Save PDF
+      doc.save(`relatorio-${selectedDog.name.toLowerCase().replace(/\s/g, '-')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success("PDF baixado com sucesso!");
+      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erro ao gerar PDF");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -163,10 +325,18 @@ export default function VetReport() {
           <Button 
             variant="outline" 
             className="gap-2"
+            onClick={generatePDF}
+            disabled={isGeneratingPDF}
+          >
+            {isGeneratingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            className="gap-2"
             onClick={printReport}
           >
             <Printer className="h-4 w-4" />
-            Imprimir
           </Button>
         </div>
 

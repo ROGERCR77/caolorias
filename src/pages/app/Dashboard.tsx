@@ -1,18 +1,21 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { AIInsightsCard } from "@/components/app/AIInsightsCard";
 import { HealthQuickCard } from "@/components/app/HealthQuickCard";
 import { WeeklyInsightsCard } from "@/components/app/WeeklyInsightsCard";
+import { StreakCard } from "@/components/app/StreakCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useData } from "@/contexts/DataContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { calculateConsecutiveDays } from "@/lib/insights";
 import { 
   Plus, Scale, UtensilsCrossed, Dog, TrendingUp, Loader2, 
-  Target, Flame, Info, ChevronRight, Sparkles, Baby
+  Target, Info, ChevronRight, Baby
 } from "lucide-react";
 import { format, isToday, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +23,8 @@ import { calculateAgeInMonths, getSuggestedMealsPerDay } from "@/contexts/DataCo
 
 const Dashboard = () => {
   const { dogs, meals, weightLogs, foods, selectedDogId, isLoading } = useData();
+  const { user } = useAuth();
+  const [longestStreak, setLongestStreak] = useState(0);
 
   const selectedDog = useMemo(() => 
     dogs.find((d) => d.id === selectedDogId),
@@ -71,6 +76,19 @@ const Dashboard = () => {
       : 0,
   }), [selectedDog, todayTotalKcal, todayTotalGrams]);
 
+  // Load user's longest streak
+  useEffect(() => {
+    const loadStreak = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("user_streaks")
+        .select("longest_streak")
+        .eq("user_id", user.id)
+        .single();
+      if (data) setLongestStreak(data.longest_streak);
+    };
+    loadStreak();
+  }, [user]);
   if (isLoading) {
     return (
       <AppLayout>
@@ -189,24 +207,12 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Streak badge */}
-            {streak >= 2 && (
-              <Card className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent/20">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-accent/20">
-                      <Flame className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-accent">{streak} dias seguidos! 🔥</p>
-                      <p className="text-xs text-muted-foreground">
-                        Continue registrando a alimentação de {selectedDog.name}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Streak Card */}
+            <StreakCard 
+              currentStreak={streak} 
+              longestStreak={longestStreak} 
+              dogName={selectedDog.name} 
+            />
 
             {/* Health Quick Card */}
             <HealthQuickCard />

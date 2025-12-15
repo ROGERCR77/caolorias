@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Mail, Save, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, User, Mail, Save, Trash2, AlertTriangle, Palette } from "lucide-react";
 import { ReminderSection } from "@/components/app/ReminderSection";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -155,6 +156,22 @@ const Profile = () => {
                 )}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Appearance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="w-5 h-5" />
+              Aparência
+            </CardTitle>
+            <CardDescription>
+              Escolha o tema de cores do app
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeToggle />
           </CardContent>
         </Card>
 
