@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Database, Share2, Eye, UserCheck, Trash2 } from "lucide-react";
+import { Shield, Database, Share2, Eye, UserCheck, Trash2, Camera } from "lucide-react";
 
 export default function DataPrivacy() {
   const sections = [
@@ -8,6 +8,11 @@ export default function DataPrivacy() {
       icon: Database,
       title: "Coleta de Dados",
       content: "O aplicativo coleta apenas informações necessárias para seu funcionamento básico e experiência do usuário. Não coletamos dados sensíveis sem consentimento explícito."
+    },
+    {
+      icon: Camera,
+      title: "Fotos e Câmera",
+      content: "Solicitamos acesso à câmera e fotos para adicionar imagens do seu cão e registrar fotos de saúde. As fotos são armazenadas com segurança, usadas exclusivamente no app e removidas ao excluir sua conta."
     },
     {
       icon: Share2,
