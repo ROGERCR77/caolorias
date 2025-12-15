@@ -3,6 +3,15 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 
+// Extend window for iOS StoreKit
+declare global {
+  interface Window {
+    storekit?: {
+      appStoreReceipt?: string;
+    };
+  }
+}
+
 // Product IDs - configure these in App Store Connect / Google Play Console
 const PRODUCT_IDS = {
   PREMIUM_MONTHLY: "caolorias_premium_1month",
@@ -133,16 +142,66 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
   const handleApprovedTransaction = async (transaction: any) => {
     try {
       console.log("IAP: Validating transaction with backend...");
+      console.log("IAP: Transaction details:", {
+        transactionId: transaction.transactionId,
+        productId: transaction.productId,
+        platform: platform,
+      });
 
-      const receiptData = transaction.transactionId || transaction.purchaseToken;
+      let receiptData: string;
       const platformType = platform === "ios" ? "apple" : "google";
+
+      if (platform === "ios") {
+        // For iOS, we need the full base64 encoded App Store receipt
+        // @ts-ignore - cordova-plugin-purchase
+        const { store } = CdvPurchase;
+        
+        // Get the application receipt (contains all transactions)
+        const appReceipt = await store.getApplicationReceipt();
+        
+        if (appReceipt?.sourceReceipt?.raw) {
+          receiptData = appReceipt.sourceReceipt.raw;
+          console.log("IAP: Got iOS receipt from applicationReceipt, length:", receiptData.length);
+        } else if (transaction.appStoreReceipt) {
+          receiptData = transaction.appStoreReceipt;
+          console.log("IAP: Got iOS receipt from transaction.appStoreReceipt, length:", receiptData.length);
+        } else {
+          // Fallback: try to get receipt directly from the native layer
+          console.log("IAP: Attempting to get receipt from native layer...");
+          const nativeReceipt = await new Promise<string>((resolve, reject) => {
+            // @ts-ignore - accessing native receipt
+            if (window.storekit?.appStoreReceipt) {
+              resolve(window.storekit.appStoreReceipt);
+            } else {
+              reject(new Error("Receipt não disponível no dispositivo"));
+            }
+          }).catch(() => null);
+          
+          if (nativeReceipt) {
+            receiptData = nativeReceipt;
+            console.log("IAP: Got iOS receipt from native layer, length:", receiptData.length);
+          } else {
+            throw new Error("Não foi possível obter o receipt da App Store. Tente novamente.");
+          }
+        }
+      } else {
+        // For Google Play, use the purchase token
+        receiptData = transaction.purchaseToken;
+        console.log("IAP: Got Android purchaseToken");
+        
+        if (!receiptData) {
+          throw new Error("Não foi possível obter o token de compra do Google Play");
+        }
+      }
 
       // Call our Edge Function to validate and update subscription
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
-        throw new Error("User not authenticated");
+        throw new Error("Usuário não autenticado");
       }
 
+      console.log("IAP: Calling validate-iap-receipt edge function...");
+      
       const response = await supabase.functions.invoke("validate-iap-receipt", {
         body: {
           receipt_data: receiptData,
@@ -152,7 +211,8 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error("IAP: Edge function error:", response.error);
+        throw new Error(response.error.message || "Erro na validação do servidor");
       }
 
       console.log("IAP: Backend validation successful", response.data);
@@ -166,11 +226,11 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
       });
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("IAP: Failed to validate transaction", error);
       toast({
         title: "Erro na validação",
-        description: "Não foi possível ativar sua assinatura. Tente restaurar as compras.",
+        description: error.message || "Não foi possível ativar sua assinatura. Tente restaurar as compras.",
         variant: "destructive",
       });
       return false;
