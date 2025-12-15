@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { useData } from "@/contexts/DataContext";
@@ -18,7 +18,10 @@ import {
   Trash2,
   AlertTriangle,
   CheckCircle2,
-  Circle
+  Circle,
+  Camera,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import {
   Dialog,
@@ -39,6 +42,7 @@ interface PoopLog {
   has_blood: boolean;
   notes: string | null;
   logged_at: string;
+  photo_url?: string | null;
 }
 
 interface HealthSymptom {
@@ -48,6 +52,7 @@ interface HealthSymptom {
   severity: string;
   notes: string | null;
   logged_at: string;
+  photo_url?: string | null;
 }
 
 interface EnergyLog {
@@ -56,6 +61,7 @@ interface EnergyLog {
   energy_level: string;
   notes: string | null;
   logged_at: string;
+  photo_url?: string | null;
 }
 
 // Texture and color options
@@ -116,15 +122,86 @@ export default function DigestiveHealth() {
   const [hasMucus, setHasMucus] = useState(false);
   const [hasBlood, setHasBlood] = useState(false);
   const [poopNotes, setPoopNotes] = useState('');
+  const [poopPhoto, setPoopPhoto] = useState<File | null>(null);
+  const [poopPhotoPreview, setPoopPhotoPreview] = useState<string | null>(null);
   
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [selectedSeverity, setSelectedSeverity] = useState('leve');
   const [symptomNotes, setSymptomNotes] = useState('');
+  const [symptomPhoto, setSymptomPhoto] = useState<File | null>(null);
+  const [symptomPhotoPreview, setSymptomPhotoPreview] = useState<string | null>(null);
   
   const [selectedEnergy, setSelectedEnergy] = useState('normal');
   const [energyNotes, setEnergyNotes] = useState('');
+  const [energyPhoto, setEnergyPhoto] = useState<File | null>(null);
+  const [energyPhotoPreview, setEnergyPhotoPreview] = useState<string | null>(null);
+
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+
+  // File input refs
+  const poopFileInputRef = useRef<HTMLInputElement>(null);
+  const symptomFileInputRef = useRef<HTMLInputElement>(null);
+  const energyFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
+
+  // Photo upload function
+  const uploadPhoto = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      setUploadingPhoto(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user!.id}/${folder}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('dog-photos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('dog-photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Erro ao enviar foto');
+      return null;
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setFile: (file: File | null) => void,
+    setPreview: (url: string | null) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear photo
+  const clearPhoto = (
+    setFile: (file: File | null) => void,
+    setPreview: (url: string | null) => void,
+    inputRef: React.RefObject<HTMLInputElement>
+  ) => {
+    setFile(null);
+    setPreview(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
 
   // Fetch data
   useEffect(() => {
@@ -172,7 +249,12 @@ export default function DigestiveHealth() {
     if (!user || !selectedDogId) return;
     
     try {
-      const { error } = await supabase.from('poop_logs').insert({
+      let photoUrl: string | null = null;
+      if (poopPhoto) {
+        photoUrl = await uploadPhoto(poopPhoto, 'poop-logs');
+      }
+
+      const { data, error } = await supabase.from('poop_logs').insert({
         dog_id: selectedDogId,
         user_id: user.id,
         texture: selectedTexture,
@@ -180,7 +262,8 @@ export default function DigestiveHealth() {
         has_mucus: hasMucus,
         has_blood: hasBlood,
         notes: poopNotes || null,
-      });
+        photo_url: photoUrl,
+      }).select().single();
 
       if (error) throw error;
 
@@ -188,14 +271,10 @@ export default function DigestiveHealth() {
       setPoopDialogOpen(false);
       resetPoopForm();
       
-      // Refresh data
-      const { data } = await supabase
-        .from('poop_logs')
-        .select('*')
-        .eq('dog_id', selectedDogId)
-        .order('logged_at', { ascending: false })
-        .limit(30);
-      if (data) setPoopLogs(data);
+      // Update local state instead of refetching
+      if (data) {
+        setPoopLogs(prev => [data, ...prev]);
+      }
     } catch (error) {
       console.error('Error saving poop log:', error);
       toast.error('Erro ao salvar registro');
@@ -207,13 +286,19 @@ export default function DigestiveHealth() {
     if (!user || !selectedDogId || selectedSymptoms.length === 0) return;
     
     try {
-      const { error } = await supabase.from('health_symptoms').insert({
+      let photoUrl: string | null = null;
+      if (symptomPhoto) {
+        photoUrl = await uploadPhoto(symptomPhoto, 'health-symptoms');
+      }
+
+      const { data, error } = await supabase.from('health_symptoms').insert({
         dog_id: selectedDogId,
         user_id: user.id,
         symptoms: selectedSymptoms,
         severity: selectedSeverity,
         notes: symptomNotes || null,
-      });
+        photo_url: photoUrl,
+      }).select().single();
 
       if (error) throw error;
 
@@ -221,13 +306,10 @@ export default function DigestiveHealth() {
       setSymptomDialogOpen(false);
       resetSymptomForm();
       
-      const { data } = await supabase
-        .from('health_symptoms')
-        .select('*')
-        .eq('dog_id', selectedDogId)
-        .order('logged_at', { ascending: false })
-        .limit(30);
-      if (data) setSymptoms(data);
+      // Update local state instead of refetching
+      if (data) {
+        setSymptoms(prev => [data, ...prev]);
+      }
     } catch (error) {
       console.error('Error saving symptoms:', error);
       toast.error('Erro ao salvar sintomas');
@@ -239,12 +321,18 @@ export default function DigestiveHealth() {
     if (!user || !selectedDogId) return;
     
     try {
-      const { error } = await supabase.from('energy_logs').insert({
+      let photoUrl: string | null = null;
+      if (energyPhoto) {
+        photoUrl = await uploadPhoto(energyPhoto, 'energy-logs');
+      }
+
+      const { data, error } = await supabase.from('energy_logs').insert({
         dog_id: selectedDogId,
         user_id: user.id,
         energy_level: selectedEnergy,
         notes: energyNotes || null,
-      });
+        photo_url: photoUrl,
+      }).select().single();
 
       if (error) throw error;
 
@@ -252,13 +340,10 @@ export default function DigestiveHealth() {
       setEnergyDialogOpen(false);
       resetEnergyForm();
       
-      const { data } = await supabase
-        .from('energy_logs')
-        .select('*')
-        .eq('dog_id', selectedDogId)
-        .order('logged_at', { ascending: false })
-        .limit(30);
-      if (data) setEnergyLogs(data);
+      // Update local state instead of refetching
+      if (data) {
+        setEnergyLogs(prev => [data, ...prev]);
+      }
     } catch (error) {
       console.error('Error saving energy log:', error);
       toast.error('Erro ao salvar registro');
@@ -306,17 +391,23 @@ export default function DigestiveHealth() {
     setHasMucus(false);
     setHasBlood(false);
     setPoopNotes('');
+    setPoopPhoto(null);
+    setPoopPhotoPreview(null);
   };
 
   const resetSymptomForm = () => {
     setSelectedSymptoms([]);
     setSelectedSeverity('leve');
     setSymptomNotes('');
+    setSymptomPhoto(null);
+    setSymptomPhotoPreview(null);
   };
 
   const resetEnergyForm = () => {
     setSelectedEnergy('normal');
     setEnergyNotes('');
+    setEnergyPhoto(null);
+    setEnergyPhotoPreview(null);
   };
 
   // Calculate weekly summary
@@ -345,6 +436,62 @@ export default function DigestiveHealth() {
   };
 
   const summary = getWeeklySummary();
+
+  // Photo upload button component
+  const PhotoUploadButton = ({ 
+    photo, 
+    preview, 
+    onClear, 
+    inputRef,
+    onSelect 
+  }: { 
+    photo: File | null;
+    preview: string | null;
+    onClear: () => void;
+    inputRef: React.RefObject<HTMLInputElement>;
+    onSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  }) => (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Foto (opcional)</p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onSelect}
+      />
+      {preview ? (
+        <div className="relative inline-block">
+          <img 
+            src={preview} 
+            alt="Preview" 
+            className="w-24 h-24 object-cover rounded-lg border"
+          />
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="absolute -top-2 -right-2 h-6 w-6"
+            onClick={onClear}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploadingPhoto}
+        >
+          <Camera className="h-4 w-4" />
+          Adicionar foto
+        </Button>
+      )}
+    </div>
+  );
 
   if (dataLoading || isLoading) {
     return (
@@ -478,6 +625,15 @@ export default function DigestiveHealth() {
                     </Button>
                   </div>
 
+                  {/* Photo Upload */}
+                  <PhotoUploadButton
+                    photo={poopPhoto}
+                    preview={poopPhotoPreview}
+                    onClear={() => clearPhoto(setPoopPhoto, setPoopPhotoPreview, poopFileInputRef)}
+                    inputRef={poopFileInputRef}
+                    onSelect={(e) => handleFileSelect(e, setPoopPhoto, setPoopPhotoPreview)}
+                  />
+
                   {/* Notes */}
                   <div>
                     <p className="text-sm font-medium mb-2">Observações (opcional)</p>
@@ -488,7 +644,8 @@ export default function DigestiveHealth() {
                     />
                   </div>
 
-                  <Button className="w-full" onClick={savePoopLog}>
+                  <Button className="w-full" onClick={savePoopLog} disabled={uploadingPhoto}>
+                    {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Salvar Registro
                   </Button>
                 </div>
@@ -503,7 +660,7 @@ export default function DigestiveHealth() {
                 poopLogs.map(log => (
                   <Card key={log.id} className="p-3">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
+                      <div className="space-y-1 flex-1">
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary">
                             {TEXTURES.find(t => t.value === log.texture)?.label}
@@ -518,6 +675,17 @@ export default function DigestiveHealth() {
                           {log.has_blood && <Badge variant="destructive" className="text-xs">Com sangue</Badge>}
                         </div>
                         {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
+                        {log.photo_url && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs gap-1"
+                            onClick={() => setViewingPhoto(log.photo_url!)}
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            Ver foto
+                          </Button>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(log.logged_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -595,6 +763,15 @@ export default function DigestiveHealth() {
                     </div>
                   </div>
 
+                  {/* Photo Upload */}
+                  <PhotoUploadButton
+                    photo={symptomPhoto}
+                    preview={symptomPhotoPreview}
+                    onClear={() => clearPhoto(setSymptomPhoto, setSymptomPhotoPreview, symptomFileInputRef)}
+                    inputRef={symptomFileInputRef}
+                    onSelect={(e) => handleFileSelect(e, setSymptomPhoto, setSymptomPhotoPreview)}
+                  />
+
                   {/* Notes */}
                   <div>
                     <p className="text-sm font-medium mb-2">Observações (opcional)</p>
@@ -608,8 +785,9 @@ export default function DigestiveHealth() {
                   <Button 
                     className="w-full" 
                     onClick={saveSymptom}
-                    disabled={selectedSymptoms.length === 0}
+                    disabled={selectedSymptoms.length === 0 || uploadingPhoto}
                   >
+                    {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Salvar Sintomas
                   </Button>
                 </div>
@@ -624,7 +802,7 @@ export default function DigestiveHealth() {
                 symptoms.map(symptom => (
                   <Card key={symptom.id} className="p-3">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
+                      <div className="space-y-1 flex-1">
                         <div className="flex flex-wrap items-center gap-1">
                           {symptom.symptoms.map(s => (
                             <Badge key={s} variant="secondary" className="text-xs">
@@ -643,6 +821,17 @@ export default function DigestiveHealth() {
                           {SEVERITIES.find(s => s.value === symptom.severity)?.label}
                         </Badge>
                         {symptom.notes && <p className="text-xs text-muted-foreground">{symptom.notes}</p>}
+                        {symptom.photo_url && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs gap-1"
+                            onClick={() => setViewingPhoto(symptom.photo_url!)}
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            Ver foto
+                          </Button>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(symptom.logged_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -695,6 +884,15 @@ export default function DigestiveHealth() {
                     ))}
                   </div>
 
+                  {/* Photo Upload */}
+                  <PhotoUploadButton
+                    photo={energyPhoto}
+                    preview={energyPhotoPreview}
+                    onClear={() => clearPhoto(setEnergyPhoto, setEnergyPhotoPreview, energyFileInputRef)}
+                    inputRef={energyFileInputRef}
+                    onSelect={(e) => handleFileSelect(e, setEnergyPhoto, setEnergyPhotoPreview)}
+                  />
+
                   {/* Notes */}
                   <div>
                     <p className="text-sm font-medium mb-2">Observações (opcional)</p>
@@ -705,7 +903,8 @@ export default function DigestiveHealth() {
                     />
                   </div>
 
-                  <Button className="w-full" onClick={saveEnergyLog}>
+                  <Button className="w-full" onClick={saveEnergyLog} disabled={uploadingPhoto}>
+                    {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Salvar
                   </Button>
                 </div>
@@ -719,12 +918,23 @@ export default function DigestiveHealth() {
               ) : (
                 energyLogs.map(log => (
                   <Card key={log.id} className="p-3">
-                    <div className="flex justify-between items-center">
-                      <div className="space-y-1">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1 flex-1">
                         <p className="font-medium">
                           {ENERGY_LEVELS.find(e => e.value === log.energy_level)?.label}
                         </p>
                         {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
+                        {log.photo_url && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs gap-1"
+                            onClick={() => setViewingPhoto(log.photo_url!)}
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            Ver foto
+                          </Button>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(log.logged_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -749,6 +959,22 @@ export default function DigestiveHealth() {
           Estes registros ajudam você a acompanhar a saúde do seu cão. Em caso de sinais preocupantes, consulte um médico-veterinário.
         </p>
       </div>
+
+      {/* Photo Viewer Dialog */}
+      <Dialog open={!!viewingPhoto} onOpenChange={() => setViewingPhoto(null)}>
+        <DialogContent className="max-w-lg p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Foto</DialogTitle>
+          </DialogHeader>
+          {viewingPhoto && (
+            <img 
+              src={viewingPhoto} 
+              alt="Foto do registro" 
+              className="w-full h-auto rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

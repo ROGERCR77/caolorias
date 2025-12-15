@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { AIInsightsCard } from "@/components/app/AIInsightsCard";
@@ -19,46 +20,55 @@ import { ptBR } from "date-fns/locale";
 const Dashboard = () => {
   const { dogs, meals, weightLogs, foods, selectedDogId, isLoading } = useData();
 
-  const selectedDog = dogs.find((d) => d.id === selectedDogId);
+  const selectedDog = useMemo(() => 
+    dogs.find((d) => d.id === selectedDogId),
+    [dogs, selectedDogId]
+  );
 
-  // Get today's meals for selected dog
-  const todaysMeals = meals.filter((meal) => {
-    if (meal.dog_id !== selectedDogId) return false;
-    return isToday(parseISO(meal.date_time));
-  });
+  // Memoize today's meals calculation
+  const todaysMeals = useMemo(() => 
+    meals.filter((meal) => {
+      if (meal.dog_id !== selectedDogId) return false;
+      return isToday(parseISO(meal.date_time));
+    }),
+    [meals, selectedDogId]
+  );
 
-  // Calculate today's totals
-  const todayTotalGrams = todaysMeals.reduce((sum, m) => sum + m.total_grams, 0);
-  const todayTotalKcal = todaysMeals.reduce((sum, m) => sum + (m.total_kcal_estimated || 0), 0);
+  // Memoize totals calculation
+  const { todayTotalGrams, todayTotalKcal } = useMemo(() => ({
+    todayTotalGrams: todaysMeals.reduce((sum, m) => sum + m.total_grams, 0),
+    todayTotalKcal: todaysMeals.reduce((sum, m) => sum + (m.total_kcal_estimated || 0), 0),
+  }), [todaysMeals]);
 
-  // Get latest weight for selected dog
-  const dogWeightLogs = weightLogs
-    .filter((w) => w.dog_id === selectedDogId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const latestWeight = dogWeightLogs[0];
+  // Memoize weight logs for selected dog
+  const { latestWeight, needsWeightUpdate } = useMemo(() => {
+    const dogWeightLogs = weightLogs
+      .filter((w) => w.dog_id === selectedDogId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latest = dogWeightLogs[0];
+    return {
+      latestWeight: latest,
+      needsWeightUpdate: latest 
+        ? new Date(latest.date) < subDays(new Date(), 14)
+        : true,
+    };
+  }, [weightLogs, selectedDogId]);
 
-  // Check if weight is old (14+ days)
-  const needsWeightUpdate = latestWeight 
-    ? new Date(latestWeight.date) < subDays(new Date(), 14)
-    : true;
+  // Memoize streak calculation
+  const streak = useMemo(() => 
+    selectedDogId ? calculateConsecutiveDays(meals, selectedDogId) : 0,
+    [meals, selectedDogId]
+  );
 
-  // Get food name by id
-  const getFoodName = (foodId: string) => {
-    return foods.find((f) => f.id === foodId)?.name || "Alimento";
-  };
-
-  // Calculate streak
-  const streak = selectedDogId 
-    ? calculateConsecutiveDays(meals, selectedDogId)
-    : 0;
-
-  // Progress percentages
-  const kcalProgress = selectedDog?.meta_kcal_dia 
-    ? Math.min(100, (todayTotalKcal / selectedDog.meta_kcal_dia) * 100)
-    : 0;
-  const gramsProgress = selectedDog?.meta_gramas_dia
-    ? Math.min(100, (todayTotalGrams / selectedDog.meta_gramas_dia) * 100)
-    : 0;
+  // Memoize progress percentages
+  const { kcalProgress, gramsProgress } = useMemo(() => ({
+    kcalProgress: selectedDog?.meta_kcal_dia 
+      ? Math.min(100, (todayTotalKcal / selectedDog.meta_kcal_dia) * 100)
+      : 0,
+    gramsProgress: selectedDog?.meta_gramas_dia
+      ? Math.min(100, (todayTotalGrams / selectedDog.meta_gramas_dia) * 100)
+      : 0,
+  }), [selectedDog, todayTotalKcal, todayTotalGrams]);
 
   if (isLoading) {
     return (
