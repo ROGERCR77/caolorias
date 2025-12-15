@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, DogSex, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia } from "@/contexts/DataContext";
-import { Calculator, Target, Info, Scale, AlertTriangle, Crown, Loader2, ChevronLeft, ChevronRight, Check, Dog as DogIcon } from "lucide-react";
+import { Calculator, Target, Info, Scale, AlertTriangle, Crown, Loader2, ChevronLeft, ChevronRight, Check, Dog as DogIcon, Camera, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BreedCombobox } from "@/components/app/BreedCombobox";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/imageCompression";
+import { useAuth } from "@/contexts/AuthContext";
 const porteToSize: Record<string, string> = {
   pequeno: "small",
   medio: "medium",
@@ -80,6 +82,7 @@ export interface DogFormData {
   condicao_corporal: CondicaoCorporal;
   meta_kcal_dia: string;
   meta_gramas_dia: string;
+  photo_url: string;
 }
 
 interface DogFormWizardProps {
@@ -100,12 +103,17 @@ const STEPS = [
 export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }: DogFormWizardProps) {
   const { toast } = useToast();
   const { isPremium } = useSubscription();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [direction, setDirection] = useState(1);
   const [selectedBreedRef, setSelectedBreedRef] = useState<BreedReference | null>(
     editingDog?.breed ? getBreedByName(editingDog.breed) || null : null
   );
+  const [photoPreview, setPhotoPreview] = useState<string | null>(editingDog?.photo_url || null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<DogFormData>({
     name: editingDog?.name || "",
@@ -120,6 +128,7 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
     condicao_corporal: editingDog?.condicao_corporal || "ideal",
     meta_kcal_dia: editingDog?.meta_kcal_dia?.toString() || "",
     meta_gramas_dia: editingDog?.meta_gramas_dia?.toString() || "",
+    photo_url: editingDog?.photo_url || "",
   });
 
   const premiumObjectives: DogObjetivo[] = ["manter_peso", "perder_peso", "ganhar_peso"];
@@ -154,10 +163,66 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
       meta_gramas_dia: metaGramas.toString(),
     });
 
-    toast({
-      title: "Meta calculada!",
-      description: `${metaKcal} kcal / ${metaGramas}g por dia`,
-    });
+    toast({ title: "Meta calculada!", description: `${metaKcal} kcal / ${metaGramas}g por dia` });
+  };
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Arquivo inválido", description: "Selecione uma imagem.", variant: "destructive" });
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPhotoPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    setPhotoFile(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    setFormData({ ...formData, photo_url: "" });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadPhoto = async (): Promise<string | null> => {
+    if (!photoFile || !user) return formData.photo_url || null;
+
+    setIsUploadingPhoto(true);
+    try {
+      // Compress image before upload
+      const compressedFile = await compressImage(photoFile, 800, 0.8);
+      
+      const fileExt = "jpg";
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("dog-photos")
+        .upload(fileName, compressedFile, { contentType: "image/jpeg", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("dog-photos")
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({ title: "Erro ao enviar foto", description: "Tente novamente.", variant: "destructive" });
+      return formData.photo_url || null;
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const validateStep = (step: number): boolean => {
@@ -213,7 +278,9 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // Upload photo if selected
+      const photoUrl = await uploadPhoto();
+      await onSubmit({ ...formData, photo_url: photoUrl || "" });
     } finally {
       setIsSubmitting(false);
     }
@@ -283,12 +350,52 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="pb-[120px]"
           >
-            {/* Step 1: Nome */}
+            {/* Step 1: Nome + Foto */}
             {currentStep === 1 && (
               <div className="flex flex-col items-center justify-center h-full space-y-6">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <DogIcon className="w-10 h-10 text-primary" />
+                {/* Photo Upload */}
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting || isUploadingPhoto}
+                    className={cn(
+                      "w-24 h-24 rounded-full flex items-center justify-center transition-all overflow-hidden",
+                      "border-2 border-dashed border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10",
+                      photoPreview && "border-solid border-primary"
+                    )}
+                  >
+                    {isUploadingPhoto ? (
+                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    ) : photoPreview ? (
+                      <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <Camera className="w-8 h-8 text-primary" />
+                        <span className="text-[10px] text-muted-foreground">Foto</span>
+                      </div>
+                    )}
+                  </button>
+                  {photoPreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
+                
                 <div className="w-full max-w-sm space-y-2">
                   <Label htmlFor="name" className="text-center block text-base">
                     Como ele(a) se chama?
