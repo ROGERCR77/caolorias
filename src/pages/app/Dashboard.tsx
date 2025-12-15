@@ -12,10 +12,11 @@ import { useData } from "@/contexts/DataContext";
 import { calculateConsecutiveDays } from "@/lib/insights";
 import { 
   Plus, Scale, UtensilsCrossed, Dog, TrendingUp, Loader2, 
-  Target, Flame, Info, ChevronRight, Sparkles
+  Target, Flame, Info, ChevronRight, Sparkles, Baby
 } from "lucide-react";
 import { format, isToday, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { calculateAgeInMonths, getSuggestedMealsPerDay } from "@/contexts/DataContext";
 
 const Dashboard = () => {
   const { dogs, meals, weightLogs, foods, selectedDogId, isLoading } = useData();
@@ -125,6 +126,23 @@ const Dashboard = () => {
           </div>
           <DogSelector className="w-auto" />
         </div>
+
+        {/* Puppy Badge */}
+        {selectedDog?.is_puppy && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20">
+            <Baby className="w-4 h-4 text-primary" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-primary">
+                🐕 Filhote {selectedDog.birth_date ? `(${calculateAgeInMonths(selectedDog.birth_date) || 0} meses)` : ''}
+              </span>
+              {selectedDog.birth_date && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  • {getSuggestedMealsPerDay(calculateAgeInMonths(selectedDog.birth_date) || 0)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {selectedDog && (
             <div className="section-content">
