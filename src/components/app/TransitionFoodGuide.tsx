@@ -8,7 +8,7 @@ interface TransitionFoodGuideProps {
 
 const phases = [
   {
-    days: [1, 2, 3],
+    days: [1, 2, 3, 4],
     name: "Fase 1: Introdução Suave",
     description: "Primeiros passos com proteínas leves",
     proteins: [
@@ -28,7 +28,7 @@ const phases = [
     tip: "Proteínas brancas são mais fáceis de digerir. Cozinhe bem todos os alimentos.",
   },
   {
-    days: [4, 5, 6],
+    days: [5, 6, 7, 8, 9],
     name: "Fase 2: Diversificação",
     description: "Expandindo o cardápio gradualmente",
     proteins: [
@@ -51,7 +51,7 @@ const phases = [
     tip: "Introduza uma novidade por vez para identificar possíveis intolerâncias.",
   },
   {
-    days: [7, 8, 9, 10],
+    days: [10, 11, 12, 13, 14],
     name: "Fase 3: Consolidação",
     description: "Variedade completa de alimentos naturais",
     proteins: [
