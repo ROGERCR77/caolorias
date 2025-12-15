@@ -39,10 +39,8 @@ const DialogContent = React.forwardRef<
         "fixed z-50 grid w-[calc(100%-32px)] max-w-lg gap-4 border bg-background shadow-xl duration-200",
         // Centered positioning with safe area consideration
         "left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
-        // Mobile: position slightly higher for better keyboard handling
-        "sm:top-[50%]",
-        // Max height with safe areas
-        "max-h-[min(85dvh,calc(100dvh-var(--safe-area-inset-top)-var(--safe-area-inset-bottom)-48px))]",
+        // Max height with safe areas - simplified
+        "max-h-[85dvh]",
         "overflow-hidden rounded-2xl p-6",
         // Animations
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -54,9 +52,7 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      <div className="overflow-y-auto overscroll-contain max-h-[calc(85dvh-80px)]">
-        {children}
-      </div>
+      {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 opacity-70 ring-offset-background transition-opacity bg-background/80 backdrop-blur-sm hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>

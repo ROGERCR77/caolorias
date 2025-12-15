@@ -173,8 +173,66 @@ export default function VetReport() {
       
       // Health Data (if loaded)
       if (healthData) {
+        // Poop Logs Summary
+        if (healthData.poopLogs.length > 0) {
+          if (y > 250) { doc.addPage(); y = 20; }
+          doc.setFontSize(14);
+          doc.text("Saúde Digestiva - Fezes (30 dias)", margin, y);
+          y += 8;
+          
+          doc.setFontSize(10);
+          doc.text(`Total de registros: ${healthData.poopLogs.length}`, margin, y);
+          y += 5;
+          
+          // Count textures
+          const textureCounts: Record<string, number> = {};
+          healthData.poopLogs.forEach((p: any) => {
+            textureCounts[p.texture] = (textureCounts[p.texture] || 0) + 1;
+          });
+          const mainTexture = Object.entries(textureCounts).sort((a, b) => b[1] - a[1])[0];
+          if (mainTexture) {
+            doc.text(`Textura predominante: ${mainTexture[0]} (${mainTexture[1]}x)`, margin, y);
+            y += 5;
+          }
+          
+          const withBlood = healthData.poopLogs.filter((p: any) => p.has_blood).length;
+          const withMucus = healthData.poopLogs.filter((p: any) => p.has_mucus).length;
+          if (withBlood > 0) {
+            doc.setTextColor(255, 0, 0);
+            doc.text(`⚠️ Com sangue: ${withBlood} ocorrência(s)`, margin, y);
+            doc.setTextColor(0, 0, 0);
+            y += 5;
+          }
+          if (withMucus > 0) {
+            doc.text(`Com muco: ${withMucus} ocorrência(s)`, margin, y);
+            y += 5;
+          }
+          y += 10;
+        }
+
+        // Energy Logs Summary
+        if (healthData.energyLogs.length > 0) {
+          if (y > 250) { doc.addPage(); y = 20; }
+          doc.setFontSize(14);
+          doc.text("Nível de Energia (30 dias)", margin, y);
+          y += 8;
+          
+          doc.setFontSize(10);
+          const energyCounts: Record<string, number> = {};
+          healthData.energyLogs.forEach((e: any) => {
+            energyCounts[e.energy_level] = (energyCounts[e.energy_level] || 0) + 1;
+          });
+          Object.entries(energyCounts).forEach(([level, count]) => {
+            const levelLabel = level === 'muito_agitado' ? 'Muito agitado' : level === 'normal' ? 'Normal' : 'Muito quieto';
+            doc.text(`${levelLabel}: ${count} dia(s)`, margin, y);
+            y += 5;
+          });
+          y += 10;
+        }
+
         // Intolerances
         if (healthData.intolerances.length > 0) {
+          if (y > 250) { doc.addPage(); y = 20; }
           doc.setFontSize(14);
           doc.text("Alergias/Intolerâncias", margin, y);
           y += 8;
@@ -190,6 +248,7 @@ export default function VetReport() {
         
         // Symptoms
         if (healthData.symptoms.length > 0) {
+          if (y > 250) { doc.addPage(); y = 20; }
           doc.setFontSize(14);
           doc.text("Sintomas Registrados (30 dias)", margin, y);
           y += 8;
@@ -204,6 +263,7 @@ export default function VetReport() {
         
         // Activity
         if (healthData.activityLogs.length > 0) {
+          if (y > 250) { doc.addPage(); y = 20; }
           doc.setFontSize(14);
           doc.text("Atividade Física (30 dias)", margin, y);
           y += 8;
@@ -478,6 +538,82 @@ export default function VetReport() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Poop Logs Summary */}
+              {healthData.poopLogs.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      💩 Saúde Digestiva - Fezes (30 dias)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total de registros</span>
+                        <span className="font-semibold">{healthData.poopLogs.length}</span>
+                      </div>
+                      {(() => {
+                        const textureCounts: Record<string, number> = {};
+                        healthData.poopLogs.forEach((p: any) => {
+                          textureCounts[p.texture] = (textureCounts[p.texture] || 0) + 1;
+                        });
+                        const entries = Object.entries(textureCounts).sort((a, b) => b[1] - a[1]);
+                        return entries.slice(0, 3).map(([texture, count]) => (
+                          <div key={texture} className="flex justify-between">
+                            <span className="text-muted-foreground capitalize">{texture}</span>
+                            <span className="font-semibold">{count}x</span>
+                          </div>
+                        ));
+                      })()}
+                      {healthData.poopLogs.filter((p: any) => p.has_blood).length > 0 && (
+                        <div className="flex justify-between text-destructive">
+                          <span>⚠️ Com sangue</span>
+                          <span className="font-semibold">{healthData.poopLogs.filter((p: any) => p.has_blood).length}x</span>
+                        </div>
+                      )}
+                      {healthData.poopLogs.filter((p: any) => p.has_mucus).length > 0 && (
+                        <div className="flex justify-between text-warning">
+                          <span>Com muco</span>
+                          <span className="font-semibold">{healthData.poopLogs.filter((p: any) => p.has_mucus).length}x</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Energy Logs Summary */}
+              {healthData.energyLogs.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      ⚡ Nível de Energia (30 dias)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {(() => {
+                        const energyCounts: Record<string, number> = {};
+                        healthData.energyLogs.forEach((e: any) => {
+                          energyCounts[e.energy_level] = (energyCounts[e.energy_level] || 0) + 1;
+                        });
+                        const levelLabels: Record<string, string> = {
+                          muito_agitado: 'Muito agitado',
+                          normal: 'Normal', 
+                          muito_quieto: 'Muito quieto'
+                        };
+                        return Object.entries(energyCounts).map(([level, count]) => (
+                          <div key={level} className="flex justify-between">
+                            <span className="text-muted-foreground">{levelLabels[level] || level}</span>
+                            <span className="font-semibold">{count} dia(s)</span>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

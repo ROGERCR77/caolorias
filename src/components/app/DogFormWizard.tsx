@@ -417,7 +417,7 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
       </div>
 
       {/* Step Content - scrollable for keyboard */}
-      <div className="flex-1 overflow-y-auto keyboard-scroll-container relative px-4">
+      <div className="flex-1 overflow-y-auto keyboard-scroll-container relative px-4 pb-4">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentStep}
@@ -427,7 +427,7 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
             animate="center"
             exit="exit"
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="pb-[120px]"
+            className="pb-24"
           >
             {/* Step 1: Nome + Foto */}
             {currentStep === 1 && (
