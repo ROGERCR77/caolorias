@@ -899,6 +899,41 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_sends: {
+        Row: {
+          id: string
+          reminder_id: string
+          sent_at: string
+          sent_date: string
+          sent_time: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          reminder_id: string
+          sent_at?: string
+          sent_date: string
+          sent_time: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          reminder_id?: string
+          sent_at?: string
+          sent_date?: string
+          sent_time?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_sends_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminders: {
         Row: {
           created_at: string
@@ -906,6 +941,7 @@ export type Database = {
           dog_id: string | null
           enabled: boolean
           id: string
+          message: string | null
           scheduled_date: string | null
           time: string
           title: string
@@ -918,6 +954,7 @@ export type Database = {
           dog_id?: string | null
           enabled?: boolean
           id?: string
+          message?: string | null
           scheduled_date?: string | null
           time: string
           title: string
@@ -930,6 +967,7 @@ export type Database = {
           dog_id?: string | null
           enabled?: boolean
           id?: string
+          message?: string | null
           scheduled_date?: string | null
           time?: string
           title?: string
