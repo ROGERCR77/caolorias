@@ -67,6 +67,7 @@ const Dogs = () => {
       condicao_corporal: formData.condicao_corporal as Dog["condicao_corporal"],
       meta_kcal_dia: formData.meta_kcal_dia ? parseFloat(formData.meta_kcal_dia) : null,
       meta_gramas_dia: formData.meta_gramas_dia ? parseFloat(formData.meta_gramas_dia) : null,
+      photo_url: formData.photo_url || null,
     };
 
     if (editingDog) {
@@ -176,8 +177,12 @@ const Dogs = () => {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center">
-                        <DogIcon className="w-6 h-6 text-primary" />
+                      <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center overflow-hidden">
+                        {dog.photo_url ? (
+                          <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <DogIcon className="w-6 h-6 text-primary" />
+                        )}
                       </div>
                       <div>
                         <CardTitle className="text-lg">{dog.name}</CardTitle>
