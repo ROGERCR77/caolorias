@@ -8,8 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useData } from "@/contexts/DataContext";
-import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,11 +21,13 @@ type FilterPeriod = "today" | "week" | "month" | "all";
 
 const Meals = () => {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const { dogs, foods, meals, selectedDogId, setSelectedDogId, addMeal, deleteMeal, isLoading: dataLoading } = useData();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createReminder, setCreateReminder] = useState(false);
 
   const selectedDog = dogs.find((d) => d.id === selectedDogId);
 
@@ -55,6 +60,7 @@ const Meals = () => {
       title: "",
       items: [],
     });
+    setCreateReminder(false);
   };
 
   const openNewMealDialog = () => {
@@ -83,6 +89,48 @@ const Meals = () => {
       ...prev,
       items: prev.items.filter((_, i) => i !== index),
     }));
+  };
+
+  const createMealReminder = async (dogId: string, dogName: string, mealTime: string) => {
+    if (!user) return;
+    
+    // Extract time from datetime
+    const time = mealTime.split('T')[1]?.substring(0, 5) || '08:00';
+    
+    // Check if reminder already exists for this time and dog
+    const { data: existingReminders } = await supabase
+      .from('reminders')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('dog_id', dogId)
+      .eq('time', time)
+      .eq('type', 'meal');
+
+    if (existingReminders && existingReminders.length > 0) {
+      toast({
+        title: "Lembrete já existe",
+        description: `Você já tem um lembrete de refeição configurado para ${time}.`,
+      });
+      return;
+    }
+
+    // Create new reminder
+    const { error } = await supabase.from('reminders').insert({
+      user_id: user.id,
+      dog_id: dogId,
+      title: `Hora de alimentar ${dogName}`,
+      type: 'meal',
+      time: time,
+      days_of_week: [0, 1, 2, 3, 4, 5, 6], // All days
+      enabled: true,
+    });
+
+    if (!error) {
+      toast({
+        title: "Lembrete criado! 🔔",
+        description: `Você será lembrado às ${time} todos os dias.`,
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +186,11 @@ const Meals = () => {
         },
         formData.items
       );
+
+      // Create reminder if checkbox is checked
+      if (createReminder && selectedDog) {
+        await createMealReminder(formData.dogId, selectedDog.name, formData.dateTime);
+      }
 
       const dogName = selectedDog?.name || "seu cão";
       toast({
@@ -449,12 +502,31 @@ const Meals = () => {
                 )}
               </div>
 
+              {/* Reminder checkbox */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <Checkbox
+                  id="createReminder"
+                  checked={createReminder}
+                  onCheckedChange={(checked) => setCreateReminder(!!checked)}
+                  disabled={isSubmitting}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="createReminder" className="cursor-pointer flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-primary" />
+                    Lembrar neste horário todos os dias
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Você receberá uma notificação diária para alimentar {selectedDog?.name || "seu cão"}
+                  </p>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
                   Cancelar
                 </Button>
                 <Button type="submit" variant="accent" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar refeição"}
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
                 </Button>
               </div>
             </form>

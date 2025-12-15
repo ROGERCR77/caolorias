@@ -224,8 +224,10 @@ export type Database = {
           condicao_corporal: string | null
           created_at: string
           current_weight_kg: number | null
+          estimated_adult_weight_kg: number | null
           feeding_type: string | null
           id: string
+          is_puppy: boolean | null
           meta_gramas_dia: number | null
           meta_kcal_dia: number | null
           name: string
@@ -243,8 +245,10 @@ export type Database = {
           condicao_corporal?: string | null
           created_at?: string
           current_weight_kg?: number | null
+          estimated_adult_weight_kg?: number | null
           feeding_type?: string | null
           id?: string
+          is_puppy?: boolean | null
           meta_gramas_dia?: number | null
           meta_kcal_dia?: number | null
           name: string
@@ -262,8 +266,10 @@ export type Database = {
           condicao_corporal?: string | null
           created_at?: string
           current_weight_kg?: number | null
+          estimated_adult_weight_kg?: number | null
           feeding_type?: string | null
           id?: string
+          is_puppy?: boolean | null
           meta_gramas_dia?: number | null
           meta_kcal_dia?: number | null
           name?: string
@@ -900,6 +906,7 @@ export type Database = {
           dog_id: string | null
           enabled: boolean
           id: string
+          scheduled_date: string | null
           time: string
           title: string
           type: string
@@ -911,6 +918,7 @@ export type Database = {
           dog_id?: string | null
           enabled?: boolean
           id?: string
+          scheduled_date?: string | null
           time: string
           title: string
           type?: string
@@ -922,6 +930,7 @@ export type Database = {
           dog_id?: string | null
           enabled?: boolean
           id?: string
+          scheduled_date?: string | null
           time?: string
           title?: string
           type?: string

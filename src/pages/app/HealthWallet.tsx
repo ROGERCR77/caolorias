@@ -198,7 +198,27 @@ export default function HealthWallet() {
 
       if (error) throw error;
 
-      toast.success('Registro salvo!');
+      // Create automatic reminder if next_due_at is set
+      if (nextDueAt && selectedDog) {
+        const typeEmoji = recordType === 'vacina' ? '💉' : recordType === 'vermifugo' ? '💊' : '🛡️';
+        const reminderTitle = `${typeEmoji} ${recordName} - ${selectedDog.name}`;
+        
+        await supabase.from('reminders').insert({
+          user_id: user.id,
+          dog_id: selectedDogId,
+          title: reminderTitle,
+          type: 'health',
+          time: '09:00',
+          days_of_week: [],
+          enabled: true,
+          scheduled_date: nextDueAt,
+        });
+
+        toast.success(`Registro salvo! 🔔 Lembrete criado para ${format(parseISO(nextDueAt), "dd/MM/yyyy")}`);
+      } else {
+        toast.success('Registro salvo!');
+      }
+
       setDialogOpen(false);
       resetForm();
       
