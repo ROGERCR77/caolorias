@@ -84,7 +84,7 @@ const Dashboard = () => {
         .from("user_streaks")
         .select("longest_streak")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (data) setLongestStreak(data.longest_streak);
     };
     loadStreak();

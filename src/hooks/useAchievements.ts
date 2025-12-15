@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import * as LucideIcons from "lucide-react";
+import { toast } from "sonner";
 
 export interface Achievement {
   id: string;
@@ -56,29 +57,26 @@ export function useAchievements() {
         if (achievement.threshold && !unlocked) {
           // Calculate progress based on achievement type
           switch (achievement.code) {
+            case "first_dog":
+              progress = dogs.length > 0 ? 100 : 0;
+              break;
             case "first_meal":
               progress = meals.length > 0 ? 100 : 0;
               break;
-            case "meal_streak_7":
+            case "week_streak":
               progress = Math.min(100, (getStreak() / 7) * 100);
               break;
-            case "meal_streak_30":
+            case "month_streak":
               progress = Math.min(100, (getStreak() / 30) * 100);
               break;
             case "weight_tracker":
-              progress = Math.min(100, (weightLogs.length / achievement.threshold) * 100);
+              progress = Math.min(100, (weightLogs.length / (achievement.threshold || 10)) * 100);
               break;
-            case "meals_10":
-              progress = Math.min(100, (meals.length / 10) * 100);
-              break;
-            case "meals_50":
-              progress = Math.min(100, (meals.length / 50) * 100);
-              break;
-            case "meals_100":
+            case "hundred_meals":
               progress = Math.min(100, (meals.length / 100) * 100);
               break;
-            case "multi_dog":
-              progress = dogs.length >= 2 ? 100 : (dogs.length / 2) * 100;
+            case "multi_dogs":
+              progress = Math.min(100, (dogs.length / 3) * 100);
               break;
             default:
               progress = 0;
@@ -156,9 +154,92 @@ export function useAchievements() {
     return IconComponent || LucideIcons.Award;
   };
 
+  // Auto-unlock achievements based on progress
+  const checkAndUnlockAchievements = useCallback(async () => {
+    if (!user || achievements.length === 0) return;
+
+    const achievementsToUnlock: { id: string; name: string; icon: string }[] = [];
+
+    for (const achievement of achievements) {
+      if (achievement.unlocked) continue;
+
+      let shouldUnlock = false;
+
+      switch (achievement.code) {
+        case "first_dog":
+          shouldUnlock = dogs.length >= 1;
+          break;
+        case "first_meal":
+          shouldUnlock = meals.length >= 1;
+          break;
+        case "week_streak":
+          shouldUnlock = getStreak() >= 7;
+          break;
+        case "month_streak":
+          shouldUnlock = getStreak() >= 30;
+          break;
+        case "weight_tracker":
+          shouldUnlock = weightLogs.length >= (achievement.threshold || 10);
+          break;
+        case "hundred_meals":
+          shouldUnlock = meals.length >= 100;
+          break;
+        case "multi_dogs":
+          shouldUnlock = dogs.length >= 3;
+          break;
+      }
+
+      if (shouldUnlock) {
+        achievementsToUnlock.push({
+          id: achievement.id,
+          name: achievement.name,
+          icon: achievement.icon,
+        });
+      }
+    }
+
+    // Unlock achievements and show toast
+    for (const achievement of achievementsToUnlock) {
+      try {
+        const { error } = await supabase.from("user_achievements").insert({
+          user_id: user.id,
+          achievement_id: achievement.id,
+        });
+
+        if (!error || error.code === "23505") {
+          const Icon = getIcon(achievement.icon);
+          toast.success(`🏆 Conquista desbloqueada: ${achievement.name}!`, {
+            duration: 4000,
+          });
+        }
+      } catch (error) {
+        console.error("Error unlocking achievement:", error);
+      }
+    }
+
+    if (achievementsToUnlock.length > 0) {
+      await loadAchievements();
+    }
+  }, [user, achievements, dogs, meals, weightLogs, getStreak, getIcon, loadAchievements]);
+
+  const hasCheckedRef = useRef(false);
+
   useEffect(() => {
     loadAchievements();
   }, [loadAchievements]);
+
+  // Check for auto-unlock after achievements are loaded
+  useEffect(() => {
+    if (!isLoading && achievements.length > 0 && !hasCheckedRef.current) {
+      hasCheckedRef.current = true;
+      checkAndUnlockAchievements();
+    }
+  }, [isLoading, achievements, checkAndUnlockAchievements]);
+
+  // Reset check flag when user data changes significantly
+  useEffect(() => {
+    hasCheckedRef.current = false;
+  }, [meals.length, dogs.length, weightLogs.length]);
 
   return {
     achievements,
@@ -167,5 +248,6 @@ export function useAchievements() {
     getIcon,
     streak: getStreak(),
     reload: loadAchievements,
+    checkAndUnlockAchievements,
   };
 }
