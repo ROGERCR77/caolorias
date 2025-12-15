@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format, parseISO, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { compressImage, formatFileSize } from "@/lib/imageCompression";
 import { 
   Loader2, Plus, Trash2, Syringe, Bug, Calendar, 
   AlertTriangle, CheckCircle2, Camera, Image, Crown
@@ -141,23 +142,36 @@ export default function HealthWallet() {
   const uploadPhoto = async (): Promise<string | null> => {
     if (!photoFile || !user) return null;
     
-    const fileExt = photoFile.name.split('.').pop();
-    const fileName = `${user.id}/${selectedDogId}/${Date.now()}.${fileExt}`;
-    
-    const { error } = await supabase.storage
-      .from('dog-photos')
-      .upload(fileName, photoFile);
+    try {
+      // Compress image before upload
+      const originalSize = photoFile.size;
+      const compressedBlob = await compressImage(photoFile, 1200, 0.8);
+      const compressedSize = compressedBlob.size;
+      
+      console.log(`Image compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${Math.round((1 - compressedSize / originalSize) * 100)}% reduction)`);
+      
+      const fileName = `${user.id}/${selectedDogId}/${Date.now()}.jpg`;
+      
+      const { error } = await supabase.storage
+        .from('dog-photos')
+        .upload(fileName, compressedBlob, {
+          contentType: 'image/jpeg'
+        });
 
-    if (error) {
-      console.error('Upload error:', error);
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
+
+      const { data } = supabase.storage
+        .from('dog-photos')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Compression/upload error:', error);
       return null;
     }
-
-    const { data } = supabase.storage
-      .from('dog-photos')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
   };
 
   // Save record
