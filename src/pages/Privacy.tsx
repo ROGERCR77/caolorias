@@ -53,6 +53,28 @@ const Privacy = () => {
           </section>
 
           <section>
+            <h2 className="text-xl font-semibold mb-3">2.1. Fotos e Acesso à Câmera</h2>
+            <p className="text-muted-foreground">
+              O Cãolorias solicita acesso à sua câmera e biblioteca de fotos para:
+            </p>
+            <ul className="list-disc pl-6 text-muted-foreground mt-2 space-y-1">
+              <li>Adicionar fotos do seu cão ao perfil</li>
+              <li>Registrar fotos de saúde (fezes, sintomas, carteira de vacinação)</li>
+              <li>Documentar registros para consultas veterinárias</li>
+            </ul>
+            <p className="text-muted-foreground mt-3">
+              <strong>Informações importantes sobre suas fotos:</strong>
+            </p>
+            <ul className="list-disc pl-6 text-muted-foreground mt-2 space-y-1">
+              <li>As fotos são armazenadas de forma segura em nossos servidores</li>
+              <li>Você pode remover fotos a qualquer momento</li>
+              <li>As fotos são usadas exclusivamente dentro do aplicativo</li>
+              <li>Não compartilhamos suas fotos com terceiros</li>
+              <li>Ao excluir sua conta, todas as fotos são permanentemente removidas</li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-xl font-semibold mb-3">3. Como Usamos seus Dados</h2>
             <p className="text-muted-foreground">Utilizamos seus dados para:</p>
             <ul className="list-disc pl-6 text-muted-foreground mt-2 space-y-1">
