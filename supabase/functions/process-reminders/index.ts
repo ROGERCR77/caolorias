@@ -3,8 +3,51 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
+
+// Convert HH:MM to total minutes
+function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Convert minutes back to HH:MM
+function minutesToHhmm(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Get São Paulo timezone date/time parts
+function getSaoPauloDateTime() {
+  const tz = 'America/Sao_Paulo';
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    weekday: 'short'
+  }).formatToParts(new Date());
+
+  const get = (t: string) => parts.find(p => p.type === t)?.value || '';
+
+  const todayDate = `${get('year')}-${get('month')}-${get('day')}`;
+  const currentTime = `${get('hour')}:${get('minute')}`;
+
+  // Map Portuguese weekday abbreviations to day numbers (0=Sunday)
+  const weekdayMap: Record<string, number> = {
+    'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3,
+    'qui': 4, 'sex': 5, 'sáb': 6
+  };
+  const weekdayAbbr = get('weekday').toLowerCase().replace('.', '');
+  const currentDayOfWeek = weekdayMap[weekdayAbbr] ?? new Date().getDay();
+
+  return { todayDate, currentTime, currentDayOfWeek };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,6 +55,18 @@ serve(async (req) => {
   }
 
   try {
+    // Security: Validate cron secret header
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const requestSecret = req.headers.get('x-cron-secret');
+
+    if (cronSecret && requestSecret !== cronSecret) {
+      console.warn('🚫 Unauthorized request - invalid cron secret');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
     const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -26,14 +81,22 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
-    const currentDayOfWeek = now.getDay(); // 0-6, Sunday=0
-    const todayDate = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    
+    // Get São Paulo timezone date/time
+    const { todayDate, currentTime, currentDayOfWeek } = getSaoPauloDateTime();
+    const currentMinutes = hhmmToMinutes(currentTime);
 
-    console.log(`⏰ Processing reminders at ${currentTime} (day ${currentDayOfWeek})`);
+    // Calculate time range with ±2 minute tolerance
+    const TOLERANCE_MINUTES = 2;
+    const startMinutes = Math.max(0, currentMinutes - TOLERANCE_MINUTES);
+    const endMinutes = Math.min(1439, currentMinutes + TOLERANCE_MINUTES);
+    const startTime = minutesToHhmm(startMinutes);
+    const endTime = minutesToHhmm(endMinutes);
 
-    // Get all enabled reminders
+    console.log(`⏰ Processing reminders at ${currentTime} São Paulo (day ${currentDayOfWeek}, date ${todayDate})`);
+    console.log(`📍 Time range: ${startTime} to ${endTime} (±${TOLERANCE_MINUTES} min tolerance)`);
+
+    // Optimized query: filter by time range in database
     const { data: reminders, error } = await supabase
       .from('reminders')
       .select(`
@@ -41,20 +104,28 @@ serve(async (req) => {
         user_id,
         dog_id,
         title,
+        message,
         type,
         time,
         days_of_week,
         scheduled_date,
         dogs (name)
       `)
-      .eq('enabled', true);
+      .eq('enabled', true)
+      .gte('time', startTime)
+      .lte('time', endTime);
 
     if (error) throw error;
 
+    console.log(`📋 Found ${reminders?.length || 0} reminders in time range`);
+
     const remindersToTrigger = reminders?.filter(reminder => {
-      // Check if time matches (with 1-minute tolerance)
       const reminderTime = reminder.time?.slice(0, 5);
-      if (reminderTime !== currentTime) return false;
+      if (!reminderTime) return false;
+
+      // Check time with tolerance
+      const remMin = hhmmToMinutes(reminderTime);
+      if (Math.abs(currentMinutes - remMin) > TOLERANCE_MINUTES) return false;
 
       // Check if it's a scheduled one-time reminder
       if (reminder.scheduled_date) {
@@ -69,16 +140,39 @@ serve(async (req) => {
       return false;
     }) || [];
 
-    console.log(`📬 Found ${remindersToTrigger.length} reminders to trigger`);
+    console.log(`📬 ${remindersToTrigger.length} reminders match today's criteria`);
 
     let sentCount = 0;
+    let skippedCount = 0;
     const errors: string[] = [];
 
     for (const reminder of remindersToTrigger) {
       try {
+        const reminderTime = reminder.time?.slice(0, 5) || currentTime;
+
+        // Anti-duplication: check if already sent today at this time
+        const { error: dupeError } = await supabase
+          .from('reminder_sends')
+          .insert({
+            reminder_id: reminder.id,
+            user_id: reminder.user_id,
+            sent_date: todayDate,
+            sent_time: reminderTime
+          });
+
+        if (dupeError) {
+          if (dupeError.code === '23505') { // unique violation
+            console.log(`⏭️ Skipping duplicate: ${reminder.id} (already sent at ${reminderTime})`);
+            skippedCount++;
+            continue;
+          }
+          console.warn(`⚠️ Failed to log send for ${reminder.id}:`, dupeError.message);
+        }
+
         const dogName = (reminder.dogs as any)?.name || '';
         const title = reminder.title || getDefaultTitle(reminder.type, dogName);
-        const message = getDefaultMessage(reminder.type, dogName);
+        // Use custom message if available, otherwise default
+        const message = reminder.message || getDefaultMessage(reminder.type, dogName);
 
         const response = await fetch('https://onesignal.com/api/v1/notifications', {
           method: 'POST',
@@ -125,15 +219,19 @@ serve(async (req) => {
       }
     }
 
-    console.log(`🎯 Completed: ${sentCount}/${remindersToTrigger.length} sent`);
+    console.log(`🎯 Completed: ${sentCount} sent, ${skippedCount} skipped (duplicates), ${errors.length} errors`);
 
     return new Response(
       JSON.stringify({
         success: true,
+        timezone: 'America/Sao_Paulo',
         time: currentTime,
         day: currentDayOfWeek,
-        reminders_found: remindersToTrigger.length,
+        date: todayDate,
+        reminders_in_range: reminders?.length || 0,
+        reminders_matched: remindersToTrigger.length,
         reminders_sent: sentCount,
+        reminders_skipped: skippedCount,
         errors: errors.length > 0 ? errors : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
