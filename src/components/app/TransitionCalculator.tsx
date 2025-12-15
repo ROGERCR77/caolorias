@@ -1,16 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Utensils, Leaf, Scale } from "lucide-react";
+import { Calculator, Utensils, Leaf, Scale } from "lucide-react";
 
 interface TransitionCalculatorProps {
   metaGramasDia: number | null;
   kibblePercentage: number;
   naturalPercentage: number;
+  proteinPercent?: number;
+  carbPercent?: number;
+  vegPercent?: number;
 }
 
 export function TransitionCalculator({
   metaGramasDia,
   kibblePercentage,
   naturalPercentage,
+  proteinPercent = 50,
+  carbPercent = 30,
+  vegPercent = 20,
 }: TransitionCalculatorProps) {
   if (!metaGramasDia) {
     return (
@@ -27,17 +33,17 @@ export function TransitionCalculator({
 
   const kibbleGrams = Math.round((metaGramasDia * kibblePercentage) / 100);
   const naturalGrams = Math.round((metaGramasDia * naturalPercentage) / 100);
-  
-  // Breakdown for natural food (50% protein, 30% carb, 20% veg)
-  const proteinGrams = Math.round(naturalGrams * 0.5);
-  const carbGrams = Math.round(naturalGrams * 0.3);
-  const vegGrams = Math.round(naturalGrams * 0.2);
+
+  // Usar percentuais dinâmicos
+  const proteinGrams = Math.round(naturalGrams * (proteinPercent / 100));
+  const carbGrams = Math.round(naturalGrams * (carbPercent / 100));
+  const vegGrams = Math.round(naturalGrams * (vegPercent / 100));
 
   return (
     <Card className="bg-gradient-to-br from-primary/5 to-accent/5">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Scale className="w-4 h-4 text-primary" />
+          <Calculator className="w-4 h-4 text-primary" />
           Quantidades de Hoje
         </CardTitle>
         <p className="text-xs text-muted-foreground">
@@ -47,11 +53,13 @@ export function TransitionCalculator({
       <CardContent className="space-y-4">
         {/* Total summary */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-amber-500/10 text-center">
-            <Utensils className="w-5 h-5 text-amber-600 mx-auto mb-1" />
-            <p className="text-xl font-bold text-amber-600">{kibbleGrams}g</p>
-            <p className="text-xs text-muted-foreground">Ração ({kibblePercentage}%)</p>
-          </div>
+          {kibblePercentage > 0 && (
+            <div className="p-3 rounded-lg bg-amber-500/10 text-center">
+              <Utensils className="w-5 h-5 text-amber-600 mx-auto mb-1" />
+              <p className="text-xl font-bold text-amber-600">{kibbleGrams}g</p>
+              <p className="text-xs text-muted-foreground">Ração ({kibblePercentage}%)</p>
+            </div>
+          )}
           <div className="p-3 rounded-lg bg-green-500/10 text-center">
             <Leaf className="w-5 h-5 text-green-600 mx-auto mb-1" />
             <p className="text-xl font-bold text-green-600">{naturalGrams}g</p>
@@ -63,7 +71,7 @@ export function TransitionCalculator({
         {naturalPercentage > 0 && (
           <div className="p-3 rounded-lg bg-muted/50">
             <p className="text-xs font-medium mb-2 text-muted-foreground">
-              Sugestão para os {naturalGrams}g naturais:
+              Composição AN ({proteinPercent}/{carbPercent}/{vegPercent}):
             </p>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div>

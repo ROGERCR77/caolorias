@@ -129,6 +129,10 @@ const DAY_TIPS: Record<number, string> = {
   8: "Quase lá! Observe se seu cão está mais animado - é sinal de que está funcionando.",
   9: "Último empurrãozinho! Amanhã será 100% natural.",
   10: "🎉 Parabéns! Transição completa. Agora mantenha a variedade de proteínas ao longo da semana.",
+  11: "Primeiro dia 100% natural! Mantenha a rotina e observe as fezes - devem normalizar em breve.",
+  12: "Continue firme! Varie as proteínas (frango hoje, patinho amanhã) para garantir nutrientes completos.",
+  13: "Seu cão já está adaptado! Agora é hora de explorar novas receitas e combinações.",
+  14: "🏆 Transição cautelosa finalizada! Você e seu cão estão prontos para uma vida de alimentação natural.",
 };
 
 const FAQ_ITEMS = [

@@ -44,13 +44,21 @@ export function MealPlanWeekly({
   numeroRefeicoes,
 }: MealPlanWeeklyProps) {
   const weeklyPlan = useMemo(() => {
-    const proteinFoods = foods.filter((f) => f.category === "protein");
-    const carbFoods = foods.filter((f) => f.category === "carb");
-    const vegFoods = foods.filter((f) => f.category === "vegetable");
+    // Suporta ambos os formatos de categoria (inglês e português)
+    const proteinFoods = foods.filter((f) => f.category === "proteina" || f.category === "protein");
+    const carbFoods = foods.filter((f) => f.category === "carboidrato" || f.category === "carb");
+    const vegFoods = foods.filter((f) => f.category === "vegetal" || f.category === "vegetable");
+
+    // Verificar se há alimentos em todas as categorias
+    if (proteinFoods.length === 0 || carbFoods.length === 0 || vegFoods.length === 0) {
+      return [];
+    }
 
     const gramasProteina = Math.round((metaGramasDia * percentualProteina) / 100);
     const gramasCarbo = Math.round((metaGramasDia * percentualCarbo) / 100);
     const gramasVegetais = Math.round((metaGramasDia * percentualVegetais) / 100);
+    
+    const refeicoesDia = Math.max(1, numeroRefeicoes); // Evitar divisão por zero
 
     // Rotate foods throughout the week
     return DIAS_SEMANA.map((dia, dayIndex) => {
@@ -64,17 +72,20 @@ export function MealPlanWeekly({
           {
             category: "protein",
             food: protein,
-            grams: Math.round(gramasProteina / numeroRefeicoes),
+            grams: Math.round(gramasProteina / refeicoesDia),
+            gramsTotal: gramasProteina,
           },
           {
             category: "carb",
             food: carb,
-            grams: Math.round(gramasCarbo / numeroRefeicoes),
+            grams: Math.round(gramasCarbo / refeicoesDia),
+            gramsTotal: gramasCarbo,
           },
           {
             category: "vegetable",
             food: veg,
-            grams: Math.round(gramasVegetais / numeroRefeicoes),
+            grams: Math.round(gramasVegetais / refeicoesDia),
+            gramsTotal: gramasVegetais,
           },
         ],
       };
@@ -82,9 +93,9 @@ export function MealPlanWeekly({
   }, [foods, metaGramasDia, percentualProteina, percentualCarbo, percentualVegetais, numeroRefeicoes]);
 
   const hasAllCategories = useMemo(() => {
-    const proteinFoods = foods.filter((f) => f.category === "protein");
-    const carbFoods = foods.filter((f) => f.category === "carb");
-    const vegFoods = foods.filter((f) => f.category === "vegetable");
+    const proteinFoods = foods.filter((f) => f.category === "proteina" || f.category === "protein");
+    const carbFoods = foods.filter((f) => f.category === "carboidrato" || f.category === "carb");
+    const vegFoods = foods.filter((f) => f.category === "vegetal" || f.category === "vegetable");
     return proteinFoods.length > 0 && carbFoods.length > 0 && vegFoods.length > 0;
   }, [foods]);
 
