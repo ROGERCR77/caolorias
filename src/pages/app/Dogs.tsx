@@ -2,8 +2,8 @@ import { useState } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useData, Dog, DogObjetivo } from "@/contexts/DataContext";
-import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Crown, X } from "lucide-react";
+import { useData, Dog, DogObjetivo, calculateAgeInMonths } from "@/contexts/DataContext";
+import { Plus, Edit2, Trash2, Dog as DogIcon, Loader2, Crown, X, Baby } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { usePlanLimits } from "@/hooks/useSubscription";
@@ -187,8 +187,19 @@ const Dogs = () => {
                         )}
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{dog.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg">{dog.name}</CardTitle>
+                          {dog.is_puppy && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                              <Baby className="w-3 h-3" />
+                              Filhote
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{dog.breed || "Sem raça definida"}</p>
+                        {dog.is_puppy && dog.birth_date && (
+                          <p className="text-xs text-primary">{calculateAgeInMonths(dog.birth_date) || 0} meses</p>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -18,6 +18,7 @@ interface UserDogData {
   dog_id: string;
   dog_name: string;
   birth_date: string | null;
+  is_puppy: boolean;
 }
 
 // ==================== NOTIFICATION GENERATORS ====================
@@ -423,6 +424,54 @@ async function checkStreakNotifications(
   return notifications;
 }
 
+async function checkPuppyTransitionNotifications(
+  supabase: SupabaseClient,
+  userDogs: UserDogData[],
+  today: Date
+): Promise<Notification[]> {
+  const notifications: Notification[] = [];
+  
+  for (const { user_id, dog_id, dog_name, birth_date, is_puppy } of userDogs) {
+    if (!is_puppy || !birth_date) continue;
+    
+    const birthDateObj = new Date(birth_date);
+    const ageInMonths = (today.getFullYear() - birthDateObj.getFullYear()) * 12 + 
+                        (today.getMonth() - birthDateObj.getMonth());
+    
+    // Check if puppy is turning 12 months (within 7 days)
+    if (ageInMonths >= 11 && ageInMonths <= 12) {
+      const daysUntil12Months = Math.round(
+        (new Date(birthDateObj.getFullYear() + 1, birthDateObj.getMonth(), birthDateObj.getDate()).getTime() - today.getTime()) 
+        / (1000 * 60 * 60 * 24)
+      );
+      
+      if (daysUntil12Months === 7) {
+        notifications.push({
+          user_id,
+          title: '🐕 Quase adulto!',
+          message: `${dog_name} completará 12 meses em 1 semana! Hora de ajustar a alimentação para adulto.`,
+          category: 'puppy_transition'
+        });
+      } else if (daysUntil12Months === 0) {
+        notifications.push({
+          user_id,
+          title: '🎉 Parabéns! Seu filhote cresceu!',
+          message: `${dog_name} completou 12 meses! Atualize o perfil para "adulto" e recalcule a meta alimentar.`,
+          category: 'puppy_transition'
+        });
+        
+        // Auto-update dog to not be a puppy anymore
+        await supabase
+          .from('dogs')
+          .update({ is_puppy: false })
+          .eq('id', dog_id);
+      }
+    }
+  }
+  
+  return notifications;
+}
+
 async function checkCalorieNotifications(
   supabase: SupabaseClient,
   userDogs: UserDogData[],
@@ -510,7 +559,7 @@ serve(async (req) => {
     // Get all users with their dogs
     const { data: dogs, error: dogsError } = await supabase
       .from('dogs')
-      .select('id, user_id, name, birth_date')
+      .select('id, user_id, name, birth_date, is_puppy')
       .order('created_at', { ascending: true });
 
     if (dogsError) throw dogsError;
@@ -525,7 +574,8 @@ serve(async (req) => {
           user_id: dog.user_id,
           dog_id: dog.id,
           dog_name: dog.name,
-          birth_date: dog.birth_date
+          birth_date: dog.birth_date,
+          is_puppy: dog.is_puppy || false
         });
         seenUsers.add(dog.user_id);
       }
@@ -545,7 +595,8 @@ serve(async (req) => {
       transitionNotifications,
       birthdayNotifications,
       streakNotifications,
-      calorieNotifications
+      calorieNotifications,
+      puppyTransitionNotifications
     ] = await Promise.all([
       checkMealNotifications(supabase, userDogs, today),
       checkWeightNotifications(supabase, userDogs, today),
@@ -557,7 +608,8 @@ serve(async (req) => {
       checkDietaryTransitionNotifications(supabase, userDogs, today),
       checkBirthdayNotifications(userDogs, today),
       checkStreakNotifications(supabase, userDogs, today),
-      checkCalorieNotifications(supabase, userDogs, today)
+      checkCalorieNotifications(supabase, userDogs, today),
+      checkPuppyTransitionNotifications(supabase, userDogs, today)
     ]);
 
     // Combine all notifications
@@ -572,7 +624,8 @@ serve(async (req) => {
       ...transitionNotifications,
       ...birthdayNotifications,
       ...streakNotifications,
-      ...calorieNotifications
+      ...calorieNotifications,
+      ...puppyTransitionNotifications
     ];
 
     // Deduplicate by user_id + category (max 1 per category per user)
