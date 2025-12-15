@@ -383,11 +383,11 @@ const Meals = () => {
 
         {/* New Meal Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-lg bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+          <DialogContent className="sm:max-w-lg bg-card max-h-[85dvh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Registrar refeição</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 pb-[100px]">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto keyboard-scroll-container space-y-4 pr-1">
               {/* Help text */}
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
                 <Info className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
@@ -521,12 +521,12 @@ const Meals = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4 pb-safe sticky bottom-0 bg-card">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
                   Cancelar
                 </Button>
                 <Button type="submit" variant="accent" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar refeição"}
                 </Button>
               </div>
             </form>
