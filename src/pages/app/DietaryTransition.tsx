@@ -394,7 +394,7 @@ export default function DietaryTransition() {
 
   const currentSchedule = transition ? getSchedule()[transition.current_day - 1] : null;
   const progress = transition ? ((transition.current_day - 1) / transition.total_days) * 100 : 0;
-  const currentTip = transition ? DAY_TIPS[Math.min(transition.current_day, 10)] : "";
+  const currentTip = transition ? (DAY_TIPS[transition.current_day] || DAY_TIPS[transition.total_days]) : "";
 
   return (
     <AppLayout>
