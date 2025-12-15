@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useData, MealPlanItem } from "@/contexts/DataContext";
 import { Link } from "react-router-dom";
 import { 
   Loader2, AlertTriangle, Target, UtensilsCrossed, RefreshCcw, 
-  Info, ChevronRight, Beef, Wheat, Salad, Crown, Lock
+  Info, ChevronRight, Beef, Wheat, Salad, Crown, Lock, Sparkles, Lightbulb
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
+import { MealPlanWeekly } from "@/components/app/MealPlanWeekly";
 
 const objetivoLabels: Record<string, string> = {
   manter_peso: "Manter peso",
@@ -35,12 +37,22 @@ const categoryIcons: Record<string, React.ElementType> = {
   vegetable: Salad,
 };
 
+// Presets based on objectives
+const DISTRIBUTION_PRESETS = {
+  perder_peso: { protein: 55, carb: 25, veg: 20, label: "Perder peso" },
+  ganhar_peso: { protein: 45, carb: 35, veg: 20, label: "Ganhar peso" },
+  manter_peso: { protein: 50, carb: 30, veg: 20, label: "Manter peso" },
+  alimentacao_saudavel: { protein: 50, carb: 30, veg: 20, label: "Alimentação saudável" },
+  filhote: { protein: 55, carb: 30, veg: 15, label: "Filhote (mais proteína)" },
+};
+
 const MealPlan = () => {
   const { dogs, foods, mealPlans, selectedDogId, addMealPlan, isLoading } = useData();
   const { toast } = useToast();
   const { isPremium, canAccessFeature } = useSubscription();
   const [isGenerating, setIsGenerating] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showWeekly, setShowWeekly] = useState(false);
 
   const [formData, setFormData] = useState({
     numero_refeicoes: "2",
@@ -56,6 +68,15 @@ const MealPlan = () => {
     return mealPlans.find((p) => p.dog_id === selectedDogId && p.ativo);
   }, [mealPlans, selectedDogId]);
 
+  // Food counts by category
+  const foodCounts = useMemo(() => {
+    return {
+      protein: foods.filter((f) => f.category === "protein").length,
+      carb: foods.filter((f) => f.category === "carb").length,
+      vegetable: foods.filter((f) => f.category === "vegetable").length,
+    };
+  }, [foods]);
+
   // Validate percentages
   const totalPercentage = 
     parseInt(formData.percentual_proteina || "0") +
@@ -66,6 +87,19 @@ const MealPlan = () => {
 
   // Check if dog has goals set
   const hasGoals = selectedDog?.meta_kcal_dia && selectedDog?.meta_gramas_dia;
+
+  // Apply preset
+  const applyPreset = (presetKey: string) => {
+    const preset = DISTRIBUTION_PRESETS[presetKey as keyof typeof DISTRIBUTION_PRESETS];
+    if (preset) {
+      setFormData({
+        ...formData,
+        percentual_proteina: preset.protein.toString(),
+        percentual_carbo: preset.carb.toString(),
+        percentual_vegetais: preset.veg.toString(),
+      });
+    }
+  };
 
   const handleGeneratePlan = async () => {
     if (!selectedDog || !hasGoals || !isValidPercentage) return;
@@ -88,7 +122,7 @@ const MealPlan = () => {
       const carbFoods = foods.filter((f) => f.category === "carb");
       const vegFoods = foods.filter((f) => f.category === "vegetable");
 
-      // Generate plan items
+      // Generate plan items WITH ROTATION
       const items: Omit<MealPlanItem, "id" | "meal_plan_id">[] = [];
       const refeicaoNomes = numRefeicoes === 2 
         ? ["Café da manhã", "Jantar"]
@@ -99,11 +133,16 @@ const MealPlan = () => {
         const nome = refeicaoNomes[i];
         const divisor = numRefeicoes;
 
+        // ROTATE: Use different foods for each meal
+        const proteinFood = proteinFoods[i % proteinFoods.length];
+        const carbFood = carbFoods[i % carbFoods.length];
+        const vegFood = vegFoods[i % vegFoods.length];
+
         // Protein item
         items.push({
           refeicao_ordem: ordem,
           refeicao_nome: nome,
-          food_id: proteinFoods[0]?.id || null,
+          food_id: proteinFood?.id || null,
           categoria: "protein",
           gramas_sugeridas: Math.round(gramasProteina / divisor),
         });
@@ -112,7 +151,7 @@ const MealPlan = () => {
         items.push({
           refeicao_ordem: ordem,
           refeicao_nome: nome,
-          food_id: carbFoods[0]?.id || null,
+          food_id: carbFood?.id || null,
           categoria: "carb",
           gramas_sugeridas: Math.round(gramasCarbo / divisor),
         });
@@ -121,7 +160,7 @@ const MealPlan = () => {
         items.push({
           refeicao_ordem: ordem,
           refeicao_nome: nome,
-          food_id: vegFoods[0]?.id || null,
+          food_id: vegFood?.id || null,
           categoria: "vegetable",
           gramas_sugeridas: Math.round(gramasVegetais / divisor),
         });
@@ -145,12 +184,12 @@ const MealPlan = () => {
 
       toast({
         title: "Plano gerado!",
-        description: `O plano sugerido de ${selectedDog.name} foi criado. Lembre-se de ajustar conforme orientação do veterinário.`,
+        description: `O plano de ${selectedDog.name} foi criado com variação de alimentos.`,
       });
     } catch (error: any) {
       toast({
         title: "Algo deu errado",
-        description: "Tente novamente. Se o problema continuar, entre em contato com o suporte.",
+        description: "Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -239,7 +278,8 @@ const MealPlan = () => {
                   Aviso importante
                 </h4>
                 <p className="text-sm text-yellow-700/80 dark:text-yellow-400/80">
-                  As quantidades sugeridas aqui são uma estimativa baseada nas metas que você definiu. Elas <strong>não substituem</strong> um cardápio formulado por médico-veterinário nutrólogo. Sempre que você tiver um plano prescrito, siga o plano do profissional e use o Cãolorias apenas para registrar e acompanhar.
+                  As quantidades sugeridas aqui são uma estimativa. Elas <strong>não substituem</strong> um cardápio 
+                  formulado por médico-veterinário nutrólogo.
                 </p>
               </div>
             </div>
@@ -276,6 +316,35 @@ const MealPlan = () => {
               </CardContent>
             </Card>
 
+            {/* Food inventory status */}
+            <Card className="bg-muted/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Seus alimentos cadastrados</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className={`p-2 rounded-lg ${foodCounts.protein > 0 ? "bg-red-500/10" : "bg-muted"}`}>
+                    <Beef className={`w-4 h-4 mx-auto mb-1 ${foodCounts.protein > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium">{foodCounts.protein} proteínas</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${foodCounts.carb > 0 ? "bg-amber-500/10" : "bg-muted"}`}>
+                    <Wheat className={`w-4 h-4 mx-auto mb-1 ${foodCounts.carb > 0 ? "text-amber-500" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium">{foodCounts.carb} carboidratos</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${foodCounts.vegetable > 0 ? "bg-green-500/10" : "bg-muted"}`}>
+                    <Salad className={`w-4 h-4 mx-auto mb-1 ${foodCounts.vegetable > 0 ? "text-green-500" : "text-muted-foreground"}`} />
+                    <p className="text-xs font-medium">{foodCounts.vegetable} vegetais</p>
+                  </div>
+                </div>
+                {(foodCounts.protein === 0 || foodCounts.carb === 0 || foodCounts.vegetable === 0) && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    💡 Cadastre mais alimentos para ter mais variedade no plano
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* No goals message */}
             {!hasGoals && (
               <Card className="text-center py-8">
@@ -283,7 +352,7 @@ const MealPlan = () => {
                   <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Metas não definidas</h3>
                   <p className="text-muted-foreground mb-4">
-                    Para gerar um plano sugerido, primeiro calcule a meta deste cão na tela de cadastro/edição.
+                    Para gerar um plano sugerido, primeiro calcule a meta deste cão.
                   </p>
                   <Button asChild>
                     <Link to="/app/caes">
@@ -322,13 +391,34 @@ const MealPlan = () => {
                       </Select>
                     </div>
 
+                    {/* Preset buttons */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-primary" />
+                        Sugestões rápidas
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(DISTRIBUTION_PRESETS).map(([key, preset]) => (
+                          <Button
+                            key={key}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => applyPreset(key)}
+                            className="text-xs"
+                          >
+                            {preset.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="space-y-3">
                       <Label>Distribuição por grupo (total = 100%)</Label>
                       
                       <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs flex items-center gap-1">
-                            <Beef className="w-3 h-3" /> Proteínas
+                            <Beef className="w-3 h-3 text-red-500" /> Proteínas
                           </Label>
                           <Input
                             type="number"
@@ -340,7 +430,7 @@ const MealPlan = () => {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs flex items-center gap-1">
-                            <Wheat className="w-3 h-3" /> Carboidratos
+                            <Wheat className="w-3 h-3 text-amber-500" /> Carboidratos
                           </Label>
                           <Input
                             type="number"
@@ -352,7 +442,7 @@ const MealPlan = () => {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs flex items-center gap-1">
-                            <Salad className="w-3 h-3" /> Vegetais
+                            <Salad className="w-3 h-3 text-green-500" /> Vegetais
                           </Label>
                           <Input
                             type="number"
@@ -386,6 +476,28 @@ const MealPlan = () => {
                   </CardContent>
                 </Card>
 
+                {/* Toggle weekly view */}
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={() => setShowWeekly(!showWeekly)}
+                >
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  {showWeekly ? "Ocultar cardápio semanal" : "Ver cardápio semanal variado"}
+                </Button>
+
+                {/* Weekly plan preview */}
+                {showWeekly && (
+                  <MealPlanWeekly
+                    foods={foods}
+                    metaGramasDia={selectedDog.meta_gramas_dia || 0}
+                    percentualProteina={parseInt(formData.percentual_proteina)}
+                    percentualCarbo={parseInt(formData.percentual_carbo)}
+                    percentualVegetais={parseInt(formData.percentual_vegetais)}
+                    numeroRefeicoes={parseInt(formData.numero_refeicoes)}
+                  />
+                )}
+
                 {/* Active plan display */}
                 {activePlan && (
                   <Card>
@@ -400,7 +512,8 @@ const MealPlan = () => {
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
                         <Info className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                         <p className="text-muted-foreground">
-                          Esse plano é um modelo para ajudar você a organizar as marmitinhas e a rotina de {selectedDog.name}. Ajuste sempre com base no que o veterinário orientar.
+                          Esse plano é um modelo para ajudar você a organizar as marmitinhas de {selectedDog.name}. 
+                          Ajuste sempre com base no que o veterinário orientar.
                         </p>
                       </div>
 
@@ -441,50 +554,40 @@ const MealPlan = () => {
                       </div>
 
                       {/* Meals */}
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {Array.from(groupedItems.entries()).map(([ordem, items]) => (
-                          <div key={ordem} className="border rounded-lg overflow-hidden">
-                            <div className="bg-primary/5 px-4 py-2 font-semibold">
-                              {items[0]?.refeicao_nome}
-                            </div>
-                            <div className="divide-y">
-                              {items.map((item) => {
-                                const IconComponent = categoryIcons[item.categoria] || Info;
-                                return (
-                                  <div key={item.id} className="px-4 py-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <IconComponent className="w-4 h-4 text-muted-foreground" />
-                                      <div>
-                                        <p className="font-medium">
-                                          {item.food_id ? getFoodName(item.food_id) : (
-                                            <span className="text-muted-foreground italic">
-                                              {categoryLabels[item.categoria]} - não definido
-                                            </span>
-                                          )}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
+                          <Card key={ordem} className="bg-muted/30">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">
+                                {items[0]?.refeicao_nome || `Refeição ${ordem}`}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="space-y-2">
+                                {items.map((item) => {
+                                  const Icon = categoryIcons[item.categoria];
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className="flex items-center justify-between p-2 rounded-lg bg-background/50"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+                                        <span className="text-sm">{getFoodName(item.food_id)}</span>
+                                        <Badge variant="outline" className="text-xs">
                                           {categoryLabels[item.categoria]}
-                                        </p>
+                                        </Badge>
                                       </div>
+                                      <span className="font-mono text-sm font-medium">
+                                        {item.gramas_sugeridas}g
+                                      </span>
                                     </div>
-                                    <span className="font-semibold text-primary">
-                                      {item.gramas_sugeridas}g
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                                  );
+                                })}
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
-                      </div>
-
-                      {/* Bottom disclaimer */}
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 text-xs">
-                        <AlertTriangle className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <p className="text-muted-foreground">
-                          Dietas caseiras mal balanceadas podem causar deficiências nutricionais ao longo do tempo. 
-                          Sempre use estas informações como apoio, e não como orientação definitiva.
-                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -493,6 +596,12 @@ const MealPlan = () => {
             )}
           </div>
         )}
+
+        <UpgradeModal 
+          open={showUpgrade} 
+          onOpenChange={setShowUpgrade}
+          feature="meal_plan"
+        />
       </div>
     </AppLayout>
   );
