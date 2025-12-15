@@ -68,6 +68,8 @@ const Dogs = () => {
       meta_kcal_dia: formData.meta_kcal_dia ? parseFloat(formData.meta_kcal_dia) : null,
       meta_gramas_dia: formData.meta_gramas_dia ? parseFloat(formData.meta_gramas_dia) : null,
       photo_url: formData.photo_url || null,
+      is_puppy: formData.is_puppy || false,
+      estimated_adult_weight_kg: formData.estimated_adult_weight_kg ? parseFloat(formData.estimated_adult_weight_kg) : null,
     };
 
     if (editingDog) {

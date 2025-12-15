@@ -26,6 +26,8 @@ export interface Dog {
   condicao_corporal: CondicaoCorporal;
   meta_kcal_dia: number | null;
   meta_gramas_dia: number | null;
+  is_puppy: boolean;
+  estimated_adult_weight_kg: number | null;
   created_at: string;
 }
 
@@ -147,6 +149,46 @@ export function calculateMetaGramasDia(weightKg: number, objetivo: DogObjetivo):
   }
 
   return Math.round(weightKg * 1000 * percentual);
+}
+
+// Puppy-specific calculation helpers
+export function calculateAgeInMonths(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const now = new Date();
+  const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+  return Math.max(0, months);
+}
+
+export function calculatePuppyMER(
+  weightKg: number,
+  ageMonths: number,
+  estimatedAdultWeightKg: number
+): number {
+  const rer = calculateRER(weightKg);
+  const halfAdultWeight = estimatedAdultWeightKg * 0.5;
+  
+  // Phase 1: Until half adult weight or up to 4 months - factor 2.2
+  if (weightKg < halfAdultWeight || ageMonths < 4) {
+    return Math.round(rer * 2.2);
+  }
+  // Phase 2: From half to full adult weight - factor 1.5
+  return Math.round(rer * 1.5);
+}
+
+export function calculatePuppyGramsPerDay(weightKg: number, ageMonths: number): number {
+  if (ageMonths < 4) {
+    return Math.round(weightKg * 1000 * 0.05); // 5% do peso
+  } else if (ageMonths < 8) {
+    return Math.round(weightKg * 1000 * 0.04); // 4% do peso
+  }
+  return Math.round(weightKg * 1000 * 0.03); // 3% do peso
+}
+
+export function getSuggestedMealsPerDay(ageMonths: number): string {
+  if (ageMonths < 4) return "3-4 refeições/dia";
+  if (ageMonths < 8) return "3 refeições/dia";
+  return "2-3 refeições/dia";
 }
 
 interface DataContextType {
@@ -284,6 +326,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         objetivo: (d.objetivo || "manter_peso") as DogObjetivo,
         nivel_atividade: (d.nivel_atividade || "moderada") as NivelAtividade,
         condicao_corporal: (d.condicao_corporal || "ideal") as CondicaoCorporal,
+        is_puppy: d.is_puppy || false,
+        estimated_adult_weight_kg: d.estimated_adult_weight_kg,
       }));
 
       const typedFoods = (foodsRes.data || []).map(f => ({
@@ -341,6 +385,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         condicao_corporal: dog.condicao_corporal,
         meta_kcal_dia: dog.meta_kcal_dia,
         meta_gramas_dia: dog.meta_gramas_dia,
+        is_puppy: dog.is_puppy,
+        estimated_adult_weight_kg: dog.estimated_adult_weight_kg,
       })
       .select()
       .single();
@@ -355,6 +401,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       objetivo: data.objetivo as DogObjetivo,
       nivel_atividade: data.nivel_atividade as NivelAtividade,
       condicao_corporal: data.condicao_corporal as CondicaoCorporal,
+      is_puppy: data.is_puppy || false,
+      estimated_adult_weight_kg: data.estimated_adult_weight_kg,
     };
     setDogs((prev) => [...prev, newDog]);
     if (!selectedDogId) setSelectedDogId(newDog.id);

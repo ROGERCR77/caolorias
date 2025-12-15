@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, DogSex, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia } from "@/contexts/DataContext";
-import { Calculator, Target, Info, Scale, AlertTriangle, Crown, Loader2, ChevronLeft, ChevronRight, Check, Dog as DogIcon, Camera, X } from "lucide-react";
+import { Dog, DogObjetivo, NivelAtividade, CondicaoCorporal, DogSex, BreedReference, calculateRER, calculateMER, calculateMetaGramasDia, calculateAgeInMonths, calculatePuppyMER, calculatePuppyGramsPerDay, getSuggestedMealsPerDay } from "@/contexts/DataContext";
+import { Calculator, Target, Info, Scale, AlertTriangle, Crown, Loader2, ChevronLeft, ChevronRight, Check, Dog as DogIcon, Camera, X, Baby } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BreedCombobox } from "@/components/app/BreedCombobox";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -83,6 +83,8 @@ export interface DogFormData {
   meta_kcal_dia: string;
   meta_gramas_dia: string;
   photo_url: string;
+  is_puppy: boolean;
+  estimated_adult_weight_kg: string;
 }
 
 interface DogFormWizardProps {
@@ -129,6 +131,8 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
     meta_kcal_dia: editingDog?.meta_kcal_dia?.toString() || "",
     meta_gramas_dia: editingDog?.meta_gramas_dia?.toString() || "",
     photo_url: editingDog?.photo_url || "",
+    is_puppy: editingDog?.is_puppy || false,
+    estimated_adult_weight_kg: editingDog?.estimated_adult_weight_kg?.toString() || "",
   });
 
   const premiumObjectives: DogObjetivo[] = ["manter_peso", "perder_peso", "ganhar_peso"];
@@ -137,7 +141,11 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
     setFormData((prev) => ({
       ...prev,
       breed: breedName,
-      ...(breedRef && !editingDog ? { size: porteToSize[breedRef.porte] as Dog["size"] } : {}),
+      ...(breedRef && !editingDog ? { 
+        size: porteToSize[breedRef.porte] as Dog["size"],
+        // Auto-fill estimated adult weight for puppies
+        estimated_adult_weight_kg: prev.is_puppy ? breedRef.peso_max_kg.toString() : prev.estimated_adult_weight_kg,
+      } : {}),
     }));
     setSelectedBreedRef(breedRef || null);
   };
@@ -153,9 +161,26 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
       return;
     }
 
-    const rer = calculateRER(weight);
-    const metaKcal = calculateMER(rer, formData.objetivo, formData.condicao_corporal, formData.nivel_atividade);
-    const metaGramas = calculateMetaGramasDia(weight, formData.objetivo);
+    let metaKcal: number;
+    let metaGramas: number;
+
+    if (formData.is_puppy) {
+      const ageMonths = calculateAgeInMonths(formData.birth_date);
+      const estimatedAdultWeight = parseFloat(formData.estimated_adult_weight_kg) || weight * 2;
+      
+      if (ageMonths !== null) {
+        metaKcal = calculatePuppyMER(weight, ageMonths, estimatedAdultWeight);
+        metaGramas = calculatePuppyGramsPerDay(weight, ageMonths);
+      } else {
+        // Fallback: assume young puppy if no birth date
+        metaKcal = calculatePuppyMER(weight, 3, estimatedAdultWeight);
+        metaGramas = calculatePuppyGramsPerDay(weight, 3);
+      }
+    } else {
+      const rer = calculateRER(weight);
+      metaKcal = calculateMER(rer, formData.objetivo, formData.condicao_corporal, formData.nivel_atividade);
+      metaGramas = calculateMetaGramasDia(weight, formData.objetivo);
+    }
 
     setFormData({
       ...formData,
@@ -413,7 +438,6 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handlePhotoSelect}
                     className="hidden"
                     disabled={isSubmitting}
@@ -552,6 +576,73 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Puppy Toggle */}
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newIsPuppy = !formData.is_puppy;
+                      setFormData({ 
+                        ...formData, 
+                        is_puppy: newIsPuppy,
+                        // Auto-fill estimated adult weight from breed reference if available
+                        estimated_adult_weight_kg: newIsPuppy && selectedBreedRef 
+                          ? selectedBreedRef.peso_max_kg.toString() 
+                          : formData.estimated_adult_weight_kg,
+                      });
+                    }}
+                    className={cn(
+                      "w-full h-14 rounded-xl border-2 font-medium transition-all flex items-center justify-center gap-3",
+                      formData.is_puppy
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <Baby className="w-5 h-5" />
+                    {formData.is_puppy ? "🐕 É um filhote" : "É filhote?"}
+                  </button>
+
+                  {formData.is_puppy && (
+                    <div className="space-y-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                      <div className="space-y-2">
+                        <Label htmlFor="estimated_adult_weight" className="text-sm">
+                          Peso adulto estimado (kg)
+                        </Label>
+                        <Input
+                          id="estimated_adult_weight"
+                          type="number"
+                          step="0.1"
+                          inputMode="decimal"
+                          value={formData.estimated_adult_weight_kg}
+                          onChange={(e) => setFormData({ ...formData, estimated_adult_weight_kg: e.target.value })}
+                          placeholder={selectedBreedRef ? `Aprox. ${selectedBreedRef.peso_max_kg} kg` : "Ex: 25"}
+                          disabled={isSubmitting}
+                          className="h-12"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {selectedBreedRef 
+                            ? `Baseado na raça: ${selectedBreedRef.peso_min_kg}–${selectedBreedRef.peso_max_kg} kg`
+                            : "Pergunte ao veterinário se não souber"}
+                        </p>
+                      </div>
+                      
+                      {formData.birth_date && (
+                        <div className="flex items-center gap-2 text-sm text-primary">
+                          <Info className="w-4 h-4" />
+                          <span>
+                            Idade: {calculateAgeInMonths(formData.birth_date) || 0} meses • 
+                            Recomendado: {getSuggestedMealsPerDay(calculateAgeInMonths(formData.birth_date) || 0)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ Filhotes têm necessidades nutricionais específicas. Consulte um veterinário.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
