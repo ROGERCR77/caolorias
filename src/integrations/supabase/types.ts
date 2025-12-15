@@ -285,6 +285,7 @@ export type Database = {
           id: string
           logged_at: string
           notes: string | null
+          photo_url: string | null
           user_id: string
         }
         Insert: {
@@ -294,6 +295,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           user_id: string
         }
         Update: {
@@ -303,6 +305,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           user_id?: string
         }
         Relationships: []
@@ -479,6 +482,7 @@ export type Database = {
           id: string
           logged_at: string
           notes: string | null
+          photo_url: string | null
           related_food_id: string | null
           severity: string
           symptoms: string[]
@@ -490,6 +494,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           related_food_id?: string | null
           severity: string
           symptoms: string[]
@@ -501,6 +506,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           related_food_id?: string | null
           severity?: string
           symptoms?: string[]
@@ -759,6 +765,7 @@ export type Database = {
           id: string
           logged_at: string
           notes: string | null
+          photo_url: string | null
           texture: string
           user_id: string
         }
@@ -771,6 +778,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           texture: string
           user_id: string
         }
@@ -783,6 +791,7 @@ export type Database = {
           id?: string
           logged_at?: string
           notes?: string | null
+          photo_url?: string | null
           texture?: string
           user_id?: string
         }

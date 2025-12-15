@@ -215,48 +215,68 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      // Fetch dogs
-      const { data: dogsData } = await supabase
-        .from("dogs")
-        .select("*")
-        .order("created_at", { ascending: true });
+      // Check for cached reference data
+      const CACHE_KEY_BREEDS = 'caolorias_breed_refs';
+      const CACHE_KEY_ACTIVITY = 'caolorias_activity_refs';
+      const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
-      // Fetch foods
-      const { data: foodsData } = await supabase
-        .from("foods")
-        .select("*")
-        .order("name", { ascending: true });
+      let cachedBreeds: BreedReference[] | null = null;
+      let cachedActivity: ActivityReference[] | null = null;
 
-      // Fetch meals with items
-      const { data: mealsData } = await supabase
-        .from("meals")
-        .select("*, meal_items(*)")
-        .order("date_time", { ascending: false });
+      try {
+        const breedsCache = localStorage.getItem(CACHE_KEY_BREEDS);
+        const activityCache = localStorage.getItem(CACHE_KEY_ACTIVITY);
+        
+        if (breedsCache) {
+          const { data, timestamp } = JSON.parse(breedsCache);
+          if (Date.now() - timestamp < CACHE_EXPIRY) {
+            cachedBreeds = data;
+          }
+        }
+        if (activityCache) {
+          const { data, timestamp } = JSON.parse(activityCache);
+          if (Date.now() - timestamp < CACHE_EXPIRY) {
+            cachedActivity = data;
+          }
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
 
-      // Fetch weight logs
-      const { data: weightLogsData } = await supabase
-        .from("weight_logs")
-        .select("*")
-        .order("date", { ascending: true });
+      // Fetch user data in parallel
+      const [dogsRes, foodsRes, mealsRes, weightRes, plansRes] = await Promise.all([
+        supabase.from("dogs").select("*").order("created_at", { ascending: true }),
+        supabase.from("foods").select("*").order("name", { ascending: true }),
+        supabase.from("meals").select("*, meal_items(*)").order("date_time", { ascending: false }),
+        supabase.from("weight_logs").select("*").order("date", { ascending: true }),
+        supabase.from("meal_plans").select("*, meal_plan_items(*)").order("created_at", { ascending: false }),
+      ]);
 
-      // Fetch meal plans with items
-      const { data: mealPlansData } = await supabase
-        .from("meal_plans")
-        .select("*, meal_plan_items(*)")
-        .order("created_at", { ascending: false });
+      // Fetch reference data only if not cached
+      let breedRefsData = cachedBreeds;
+      let activityRefsData = cachedActivity;
 
-      // Fetch breed references
-      const { data: breedRefsData } = await supabase
-        .from("dog_breed_reference")
-        .select("*")
-        .order("breed_name", { ascending: true });
+      if (!cachedBreeds || !cachedActivity) {
+        const [breedsRes, activityRes] = await Promise.all([
+          !cachedBreeds ? supabase.from("dog_breed_reference").select("*").order("breed_name", { ascending: true }) : Promise.resolve({ data: null }),
+          !cachedActivity ? supabase.from("activity_reference").select("*") : Promise.resolve({ data: null }),
+        ]);
 
-      // Fetch activity references
-      const { data: activityRefsData } = await supabase
-        .from("activity_reference")
-        .select("*");
+        if (breedsRes.data) {
+          breedRefsData = breedsRes.data as BreedReference[];
+          try {
+            localStorage.setItem(CACHE_KEY_BREEDS, JSON.stringify({ data: breedRefsData, timestamp: Date.now() }));
+          } catch (e) { /* ignore */ }
+        }
+        if (activityRes.data) {
+          activityRefsData = activityRes.data as ActivityReference[];
+          try {
+            localStorage.setItem(CACHE_KEY_ACTIVITY, JSON.stringify({ data: activityRefsData, timestamp: Date.now() }));
+          } catch (e) { /* ignore */ }
+        }
+      }
 
-      const typedDogs = (dogsData || []).map(d => ({
+      const typedDogs = (dogsRes.data || []).map(d => ({
         ...d,
         size: d.size as Dog["size"],
         feeding_type: d.feeding_type as Dog["feeding_type"],
@@ -266,18 +286,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         condicao_corporal: (d.condicao_corporal || "ideal") as CondicaoCorporal,
       }));
 
-      const typedFoods = (foodsData || []).map(f => ({
+      const typedFoods = (foodsRes.data || []).map(f => ({
         ...f,
         category: f.category as Food["category"],
       }));
 
       setDogs(typedDogs);
       setFoods(typedFoods);
-      setMeals(mealsData || []);
-      setWeightLogs(weightLogsData || []);
-      setMealPlans(mealPlansData || []);
-      setBreedReferences((breedRefsData || []) as BreedReference[]);
-      setActivityReferences((activityRefsData || []) as ActivityReference[]);
+      setMeals(mealsRes.data || []);
+      setWeightLogs(weightRes.data || []);
+      setMealPlans(plansRes.data || []);
+      setBreedReferences(breedRefsData || []);
+      setActivityReferences(activityRefsData || []);
 
       // Auto-select first dog
       if (typedDogs.length > 0 && !selectedDogId) {

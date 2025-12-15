@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,39 +9,54 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Loader2 } from "lucide-react";
 
-// Pages
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Cadastro from "./pages/Cadastro";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Advertising from "./pages/Advertising";
-import Dashboard from "./pages/app/Dashboard";
-import Dogs from "./pages/app/Dogs";
-import Foods from "./pages/app/Foods";
-import Meals from "./pages/app/Meals";
-import WeightProgress from "./pages/app/WeightProgress";
-import MealPlan from "./pages/app/MealPlan";
-import Breeds from "./pages/app/Breeds";
-import Subscription from "./pages/app/Subscription";
-import Profile from "./pages/app/Profile";
-import Recipes from "./pages/app/Recipes";
-import InsightsHistory from "./pages/app/InsightsHistory";
-import DigestiveHealth from "./pages/app/DigestiveHealth";
-import HealthWallet from "./pages/app/HealthWallet";
-import Activity from "./pages/app/Activity";
-import DietaryTransition from "./pages/app/DietaryTransition";
-import VetReport from "./pages/app/VetReport";
-import ImportantNotice from "./pages/app/ImportantNotice";
-import HowToUse from "./pages/app/HowToUse";
-import DataPrivacy from "./pages/app/DataPrivacy";
-import References from "./pages/app/References";
-import NotFound from "./pages/NotFound";
+// Lazy load pages for better performance
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const Cadastro = lazy(() => import("./pages/Cadastro"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Advertising = lazy(() => import("./pages/Advertising"));
+const Dashboard = lazy(() => import("./pages/app/Dashboard"));
+const Dogs = lazy(() => import("./pages/app/Dogs"));
+const Foods = lazy(() => import("./pages/app/Foods"));
+const Meals = lazy(() => import("./pages/app/Meals"));
+const WeightProgress = lazy(() => import("./pages/app/WeightProgress"));
+const MealPlan = lazy(() => import("./pages/app/MealPlan"));
+const Breeds = lazy(() => import("./pages/app/Breeds"));
+const Subscription = lazy(() => import("./pages/app/Subscription"));
+const Profile = lazy(() => import("./pages/app/Profile"));
+const Recipes = lazy(() => import("./pages/app/Recipes"));
+const InsightsHistory = lazy(() => import("./pages/app/InsightsHistory"));
+const DigestiveHealth = lazy(() => import("./pages/app/DigestiveHealth"));
+const HealthWallet = lazy(() => import("./pages/app/HealthWallet"));
+const Activity = lazy(() => import("./pages/app/Activity"));
+const DietaryTransition = lazy(() => import("./pages/app/DietaryTransition"));
+const VetReport = lazy(() => import("./pages/app/VetReport"));
+const ImportantNotice = lazy(() => import("./pages/app/ImportantNotice"));
+const HowToUse = lazy(() => import("./pages/app/HowToUse"));
+const DataPrivacy = lazy(() => import("./pages/app/DataPrivacy"));
+const References = lazy(() => import("./pages/app/References"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes (previously cacheTime)
+    },
+  },
+});
 
 let didInit = false;
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const App = () => {
   useEffect(() => {
@@ -93,43 +108,45 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
-                  <Routes>
-                    {/* Public routes */}
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/cadastro" element={<Cadastro />} />
-                    <Route path="/termos" element={<Terms />} />
-                    <Route path="/privacidade" element={<Privacy />} />
-                    <Route path="/publicidade" element={<Advertising />} />
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      {/* Public routes */}
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/cadastro" element={<Cadastro />} />
+                      <Route path="/termos" element={<Terms />} />
+                      <Route path="/privacidade" element={<Privacy />} />
+                      <Route path="/publicidade" element={<Advertising />} />
 
-                    {/* Protected app routes */}
-                    <Route path="/app/hoje" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                    <Route path="/app/caes" element={<ProtectedRoute><Dogs /></ProtectedRoute>} />
-                    <Route path="/app/alimentos" element={<ProtectedRoute><Foods /></ProtectedRoute>} />
-                    <Route path="/app/refeicoes" element={<ProtectedRoute><Meals /></ProtectedRoute>} />
-                    <Route path="/app/peso-progresso" element={<ProtectedRoute><WeightProgress /></ProtectedRoute>} />
-                    <Route path="/app/plano-alimentar" element={<ProtectedRoute><MealPlan /></ProtectedRoute>} />
-                    <Route path="/app/racas" element={<ProtectedRoute><Breeds /></ProtectedRoute>} />
-                    <Route path="/app/assinatura" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-                    <Route path="/app/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                    <Route path="/app/receitas" element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
-                    <Route path="/app/historico-insights" element={<ProtectedRoute><InsightsHistory /></ProtectedRoute>} />
-                    <Route path="/app/saude-digestiva" element={<ProtectedRoute><DigestiveHealth /></ProtectedRoute>} />
-                    <Route path="/app/carteira-saude" element={<ProtectedRoute><HealthWallet /></ProtectedRoute>} />
-                    <Route path="/app/atividade" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
-                    <Route path="/app/transicao" element={<ProtectedRoute><DietaryTransition /></ProtectedRoute>} />
-                    <Route path="/app/relatorio-vet" element={<ProtectedRoute><VetReport /></ProtectedRoute>} />
-                    <Route path="/app/aviso-importante" element={<ProtectedRoute><ImportantNotice /></ProtectedRoute>} />
-                    <Route path="/app/como-usar" element={<ProtectedRoute><HowToUse /></ProtectedRoute>} />
-                    <Route path="/app/privacidade-dados" element={<ProtectedRoute><DataPrivacy /></ProtectedRoute>} />
-                    <Route path="/app/referencias" element={<ProtectedRoute><References /></ProtectedRoute>} />
+                      {/* Protected app routes */}
+                      <Route path="/app/hoje" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/app/caes" element={<ProtectedRoute><Dogs /></ProtectedRoute>} />
+                      <Route path="/app/alimentos" element={<ProtectedRoute><Foods /></ProtectedRoute>} />
+                      <Route path="/app/refeicoes" element={<ProtectedRoute><Meals /></ProtectedRoute>} />
+                      <Route path="/app/peso-progresso" element={<ProtectedRoute><WeightProgress /></ProtectedRoute>} />
+                      <Route path="/app/plano-alimentar" element={<ProtectedRoute><MealPlan /></ProtectedRoute>} />
+                      <Route path="/app/racas" element={<ProtectedRoute><Breeds /></ProtectedRoute>} />
+                      <Route path="/app/assinatura" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+                      <Route path="/app/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/app/receitas" element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
+                      <Route path="/app/historico-insights" element={<ProtectedRoute><InsightsHistory /></ProtectedRoute>} />
+                      <Route path="/app/saude-digestiva" element={<ProtectedRoute><DigestiveHealth /></ProtectedRoute>} />
+                      <Route path="/app/carteira-saude" element={<ProtectedRoute><HealthWallet /></ProtectedRoute>} />
+                      <Route path="/app/atividade" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
+                      <Route path="/app/transicao" element={<ProtectedRoute><DietaryTransition /></ProtectedRoute>} />
+                      <Route path="/app/relatorio-vet" element={<ProtectedRoute><VetReport /></ProtectedRoute>} />
+                      <Route path="/app/aviso-importante" element={<ProtectedRoute><ImportantNotice /></ProtectedRoute>} />
+                      <Route path="/app/como-usar" element={<ProtectedRoute><HowToUse /></ProtectedRoute>} />
+                      <Route path="/app/privacidade-dados" element={<ProtectedRoute><DataPrivacy /></ProtectedRoute>} />
+                      <Route path="/app/referencias" element={<ProtectedRoute><References /></ProtectedRoute>} />
 
-                    {/* Redirect /app to /app/hoje */}
-                    <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
+                      {/* Redirect /app to /app/hoje */}
+                      <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
 
-                    {/* Catch-all */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                      {/* Catch-all */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
                 </BrowserRouter>
               </TooltipProvider>
             </DataProvider>
