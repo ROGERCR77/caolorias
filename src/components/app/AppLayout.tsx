@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, BarChart3, AlertTriangle, HelpCircle, Shield, Library } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, Trophy, ShoppingCart, AlertTriangle, HelpCircle, Shield, Library } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ const moreNavItems = [
   { path: "/app/peso-progresso", label: "Peso & Progresso", icon: Scale, premium: false },
   { path: "/app/alimentos", label: "Alimentos", icon: Apple, premium: false },
   { path: "/app/racas", label: "Raças", icon: BookOpen, premium: false },
+  { path: "/app/conquistas", label: "Conquistas", icon: Trophy, premium: false },
+  { path: "/app/lista-compras", label: "Lista de Compras", icon: ShoppingCart, premium: false },
   { path: "/app/plano-alimentar", label: "Plano Alimentar", icon: ClipboardList, premium: true },
   { path: "/app/carteira-saude", label: "Carteira de Saúde", icon: Syringe, premium: true },
   { path: "/app/atividade", label: "Atividade Física", icon: Activity, premium: false },
