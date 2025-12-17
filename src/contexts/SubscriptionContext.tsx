@@ -6,6 +6,7 @@ import { Capacitor } from "@capacitor/core";
 
 interface SubscriptionState {
   isLoading: boolean;
+  isIAPLoading: boolean;
   planType: "free" | "premium" | "trial";
   planSource: string | null;
   subscriptionStatus: string;
@@ -52,6 +53,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [state, setState] = useState<SubscriptionState>({
     isLoading: true,
+    isIAPLoading: true,
     planType: "free",
     planSource: null,
     subscriptionStatus: "inactive",
@@ -63,6 +65,94 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const isNativePlatform = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
+
+  // Initialize IAP store
+  useEffect(() => {
+    const initializeIAP = async () => {
+      if (!isNativePlatform) {
+        console.log("IAP: Not running on native platform, skipping initialization");
+        setState(prev => ({ ...prev, isIAPLoading: false }));
+        return;
+      }
+
+      // Wait for the plugin to be available with retry logic
+      let retries = 0;
+      const maxRetries = 10;
+      const retryDelay = 500;
+
+      while (retries < maxRetries) {
+        // @ts-ignore - cordova-plugin-purchase
+        if (typeof CdvPurchase !== "undefined") {
+          break;
+        }
+        console.log(`IAP: Waiting for CdvPurchase plugin... attempt ${retries + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        retries++;
+      }
+
+      // @ts-ignore - cordova-plugin-purchase
+      if (typeof CdvPurchase === "undefined") {
+        console.error("IAP: CdvPurchase plugin not available after retries");
+        setState(prev => ({ ...prev, isIAPLoading: false }));
+        return;
+      }
+
+      try {
+        // @ts-ignore - cordova-plugin-purchase
+        const { store, Platform, ProductType } = CdvPurchase;
+
+        if (!store) {
+          console.error("IAP: Store not available");
+          setState(prev => ({ ...prev, isIAPLoading: false }));
+          return;
+        }
+
+        console.log("IAP: Initializing store...");
+
+        // Set verbose logging for debugging
+        store.verbosity = 4; // DEBUG level
+
+        const platformId = platform === "ios" ? Platform.APPLE_APPSTORE : Platform.GOOGLE_PLAY;
+
+        // Register products
+        store.register([
+          {
+            id: PRODUCT_IDS.PREMIUM_MONTHLY,
+            type: ProductType.PAID_SUBSCRIPTION,
+            platform: platformId,
+          },
+        ]);
+
+        // Handle ready event
+        store.ready(() => {
+          console.log("IAP: Store is ready");
+          setState(prev => ({ ...prev, isIAPLoading: false }));
+        });
+
+        // Handle errors
+        store.error((error: any) => {
+          console.error("IAP: Store error", error);
+        });
+
+        // Initialize the store
+        await store.initialize([platformId]);
+
+        console.log("IAP: Store initialized successfully");
+        
+        // Log available products for debugging
+        store.products.forEach((product: any) => {
+          console.log("IAP: Product available:", product.id, product.title, product.offers?.length, "offers");
+        });
+
+      } catch (error) {
+        console.error("IAP: Failed to initialize store", error);
+      } finally {
+        setState(prev => ({ ...prev, isIAPLoading: false }));
+      }
+    };
+
+    initializeIAP();
+  }, [isNativePlatform, platform]);
 
   const refreshSubscription = async () => {
     if (!user || !session) {
@@ -101,7 +191,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           effectivePlanType = "free";
         }
 
-        setState({
+        setState(prev => ({
+          ...prev,
           isLoading: false,
           planType: effectivePlanType,
           planSource: subscription.plan_source || null,
@@ -110,7 +201,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           subscriptionEnd: subscription.current_period_end,
           isTrialExpired,
           daysUntilTrialExpires,
-        });
+        }));
       } else {
         setState(prev => ({ ...prev, isLoading: false, planType: "free" }));
       }
@@ -132,51 +223,78 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Wait for IAP to be ready
+    if (state.isIAPLoading) {
+      toast({
+        title: "Aguarde",
+        description: "O sistema de compras está sendo carregado...",
+      });
+      return;
+    }
+
     try {
-      console.log("Starting IAP for product:", selectedProductId);
+      console.log("IAP: Starting purchase for product:", selectedProductId);
 
       // @ts-ignore - cordova-plugin-purchase
       if (typeof CdvPurchase === "undefined") {
+        console.error("IAP: CdvPurchase not available");
         toast({
-          title: "Em breve",
-          description: "As compras no app estarão disponíveis em breve!",
+          title: "Sistema indisponível",
+          description: "O sistema de compras não está disponível. Por favor, reinicie o aplicativo e tente novamente.",
+          variant: "destructive",
         });
         return;
       }
 
       // @ts-ignore - cordova-plugin-purchase
       const { store } = CdvPurchase;
+      
+      // Log all registered products for debugging
+      console.log("IAP: Registered products:", store.products.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        offers: p.offers?.length || 0
+      })));
+
       const product = store.get(selectedProductId);
+      console.log("IAP: Retrieved product:", product);
 
       if (!product) {
+        console.error("IAP: Product not found:", selectedProductId);
         toast({
           title: "Produto não encontrado",
-          description: "Não foi possível encontrar o produto. Tente novamente mais tarde.",
+          description: "O produto de assinatura não está disponível no momento. Verifique se o Paid Apps Agreement foi aceito no App Store Connect.",
           variant: "destructive",
         });
         return;
       }
 
       const offer = product.getOffer();
+      console.log("IAP: Retrieved offer:", offer);
+
       if (!offer) {
+        console.error("IAP: No offer available for product:", selectedProductId);
         toast({
           title: "Oferta indisponível",
-          description: "A oferta não está disponível no momento.",
+          description: "A oferta de assinatura não está disponível. Tente novamente mais tarde.",
           variant: "destructive",
         });
         return;
       }
 
+      console.log("IAP: Ordering offer...");
+      
       // Start purchase flow
       await offer.order();
       
+      console.log("IAP: Order initiated successfully");
       // The transaction will be handled by the store.when().approved() callback
       // which is set up in the useInAppPurchase hook
     } catch (error: any) {
-      console.error("Error starting IAP:", error);
+      console.error("IAP: Error starting purchase:", error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível iniciar a compra",
+        title: "Erro na compra",
+        description: error.message || "Não foi possível iniciar a compra. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -193,7 +311,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log("Restoring purchases...");
+      console.log("IAP: Restoring purchases...");
 
       // @ts-ignore - cordova-plugin-purchase
       if (typeof CdvPurchase === "undefined") {
@@ -216,7 +334,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         description: "Suas compras anteriores foram verificadas.",
       });
     } catch (error: any) {
-      console.error("Error restoring purchases:", error);
+      console.error("IAP: Error restoring purchases:", error);
       toast({
         title: "Erro",
         description: error.message || "Não foi possível restaurar as compras",
