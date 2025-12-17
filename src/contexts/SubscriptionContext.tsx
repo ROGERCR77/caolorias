@@ -4,6 +4,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 
+// Extend window for iOS StoreKit
+declare global {
+  interface Window {
+    storekit?: {
+      appStoreReceipt?: string;
+    };
+  }
+}
+
+interface IAPProduct {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  priceMicros: number;
+  currency: string;
+}
+
 interface SubscriptionState {
   isLoading: boolean;
   isIAPLoading: boolean;
@@ -14,15 +32,19 @@ interface SubscriptionState {
   subscriptionEnd: string | null;
   isTrialExpired: boolean;
   daysUntilTrialExpires: number | null;
+  products: IAPProduct[];
+  iapError: string | null;
 }
 
 interface SubscriptionContextType extends SubscriptionState {
   refreshSubscription: () => Promise<void>;
   startInAppSubscription: (productId?: string) => Promise<void>;
   restorePurchases: () => Promise<void>;
+  retryLoadProducts: () => Promise<void>;
   isPremium: boolean;
   canAccessFeature: (feature: string) => boolean;
   isNativePlatform: boolean;
+  hasProducts: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -61,98 +83,294 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     subscriptionEnd: null,
     isTrialExpired: false,
     daysUntilTrialExpires: null,
+    products: [],
+    iapError: null,
   });
 
   const isNativePlatform = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
 
+  // Handle approved transaction - validate with backend
+  const handleApprovedTransaction = async (transaction: any) => {
+    try {
+      console.log("IAP: Validating transaction with backend...");
+      console.log("IAP: Transaction details:", {
+        transactionId: transaction.transactionId,
+        productId: transaction.productId,
+        platform: platform,
+      });
+
+      let receiptData: string;
+      const platformType = platform === "ios" ? "apple" : "google";
+
+      if (platform === "ios") {
+        // @ts-ignore - cordova-plugin-purchase
+        const { store } = CdvPurchase;
+        
+        const appReceipt = await store.getApplicationReceipt();
+        
+        if (appReceipt?.sourceReceipt?.raw) {
+          receiptData = appReceipt.sourceReceipt.raw;
+          console.log("IAP: Got iOS receipt from applicationReceipt, length:", receiptData.length);
+        } else if (transaction.appStoreReceipt) {
+          receiptData = transaction.appStoreReceipt;
+          console.log("IAP: Got iOS receipt from transaction.appStoreReceipt, length:", receiptData.length);
+        } else {
+          console.log("IAP: Attempting to get receipt from native layer...");
+          const nativeReceipt = await new Promise<string>((resolve, reject) => {
+            if (window.storekit?.appStoreReceipt) {
+              resolve(window.storekit.appStoreReceipt);
+            } else {
+              reject(new Error("Receipt não disponível no dispositivo"));
+            }
+          }).catch(() => null);
+          
+          if (nativeReceipt) {
+            receiptData = nativeReceipt;
+            console.log("IAP: Got iOS receipt from native layer, length:", receiptData.length);
+          } else {
+            throw new Error("Não foi possível obter o receipt da App Store. Tente novamente.");
+          }
+        }
+      } else {
+        receiptData = transaction.purchaseToken;
+        console.log("IAP: Got Android purchaseToken");
+        
+        if (!receiptData) {
+          throw new Error("Não foi possível obter o token de compra do Google Play");
+        }
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.access_token) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      console.log("IAP: Calling validate-iap-receipt edge function...");
+      
+      const response = await supabase.functions.invoke("validate-iap-receipt", {
+        body: {
+          receipt_data: receiptData,
+          platform: platformType,
+          product_id: transaction.productId,
+        },
+      });
+
+      if (response.error) {
+        console.error("IAP: Edge function error:", response.error);
+        throw new Error(response.error.message || "Erro na validação do servidor");
+      }
+
+      console.log("IAP: Backend validation successful", response.data);
+
+      transaction.finish();
+
+      toast({
+        title: "Assinatura ativada! 🎉",
+        description: "Bem-vindo ao Cãolorias Premium!",
+      });
+
+      // Refresh subscription status
+      await refreshSubscription();
+
+      return true;
+    } catch (error: any) {
+      console.error("IAP: Failed to validate transaction", error);
+      toast({
+        title: "Erro na validação",
+        description: error.message || "Não foi possível ativar sua assinatura. Tente restaurar as compras.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Load products from store
+  const loadProducts = async (store: any): Promise<IAPProduct[]> => {
+    const availableProducts: IAPProduct[] = [];
+    
+    console.log("IAP: Loading products, store has", store.products.length, "products");
+    
+    store.products.forEach((product: any) => {
+      console.log("IAP: Checking product:", {
+        id: product.id,
+        title: product.title,
+        offersCount: product.offers?.length || 0,
+        offers: product.offers?.map((o: any) => ({
+          id: o.id,
+          pricingPhases: o.pricingPhases?.length || 0
+        }))
+      });
+      
+      if (product.offers && product.offers.length > 0) {
+        const offer = product.offers[0];
+        availableProducts.push({
+          id: product.id,
+          title: product.title || "Cãolorias Premium",
+          description: product.description || "Acesso completo ao app",
+          price: offer.pricingPhases?.[0]?.price || "R$ 39,90",
+          priceMicros: offer.pricingPhases?.[0]?.priceMicros || 3990000,
+          currency: offer.pricingPhases?.[0]?.currency || "BRL",
+        });
+      }
+    });
+
+    return availableProducts;
+  };
+
   // Initialize IAP store
-  useEffect(() => {
-    const initializeIAP = async () => {
-      if (!isNativePlatform) {
-        console.log("IAP: Not running on native platform, skipping initialization");
-        setState(prev => ({ ...prev, isIAPLoading: false }));
+  const initializeIAP = async () => {
+    if (!isNativePlatform) {
+      console.log("IAP: Not running on native platform, skipping initialization");
+      setState(prev => ({ ...prev, isIAPLoading: false }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, isIAPLoading: true, iapError: null }));
+
+    // Wait for the plugin to be available with retry logic
+    let retries = 0;
+    const maxRetries = 15;
+    const retryDelay = 500;
+
+    while (retries < maxRetries) {
+      // @ts-ignore - cordova-plugin-purchase
+      if (typeof CdvPurchase !== "undefined") {
+        break;
+      }
+      console.log(`IAP: Waiting for CdvPurchase plugin... attempt ${retries + 1}/${maxRetries}`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      retries++;
+    }
+
+    // @ts-ignore - cordova-plugin-purchase
+    if (typeof CdvPurchase === "undefined") {
+      console.error("IAP: CdvPurchase plugin not available after retries");
+      setState(prev => ({ 
+        ...prev, 
+        isIAPLoading: false, 
+        iapError: "Plugin de compras não disponível" 
+      }));
+      return;
+    }
+
+    try {
+      // @ts-ignore - cordova-plugin-purchase
+      const { store, Platform, ProductType } = CdvPurchase;
+
+      if (!store) {
+        console.error("IAP: Store not available");
+        setState(prev => ({ 
+          ...prev, 
+          isIAPLoading: false, 
+          iapError: "Loja não disponível" 
+        }));
         return;
       }
 
-      // Wait for the plugin to be available with retry logic
-      let retries = 0;
-      const maxRetries = 10;
-      const retryDelay = 500;
+      console.log("IAP: Initializing store...");
 
-      while (retries < maxRetries) {
-        // @ts-ignore - cordova-plugin-purchase
-        if (typeof CdvPurchase !== "undefined") {
+      // Set verbose logging for debugging
+      store.verbosity = 4;
+
+      const platformId = platform === "ios" ? Platform.APPLE_APPSTORE : Platform.GOOGLE_PLAY;
+
+      // Register products
+      store.register([
+        {
+          id: PRODUCT_IDS.PREMIUM_MONTHLY,
+          type: ProductType.PAID_SUBSCRIPTION,
+          platform: platformId,
+        },
+      ]);
+
+      // Handle approved transactions
+      store.when().approved((transaction: any) => {
+        console.log("IAP: Transaction approved", {
+          transactionId: transaction.transactionId,
+          productId: transaction.productId,
+        });
+        handleApprovedTransaction(transaction);
+      });
+
+      // Handle verified transactions
+      store.when().verified((receipt: any) => {
+        console.log("IAP: Receipt verified", receipt);
+        receipt.finish();
+      });
+
+      // Handle errors
+      store.error((error: any) => {
+        console.error("IAP: Store error", {
+          code: error.code,
+          message: error.message,
+        });
+      });
+
+      // Initialize the store
+      console.log("IAP: Initializing with platform:", platformId);
+      await store.initialize([platformId]);
+
+      console.log("IAP: Store initialized, waiting for products...");
+
+      // CRITICAL: Wait for products to actually load with polling
+      let productAttempts = 0;
+      const maxProductAttempts = 20; // 10 seconds total
+      let products: IAPProduct[] = [];
+
+      while (productAttempts < maxProductAttempts) {
+        products = await loadProducts(store);
+        
+        if (products.length > 0) {
+          console.log("IAP: Products loaded successfully:", products.length);
           break;
         }
-        console.log(`IAP: Waiting for CdvPurchase plugin... attempt ${retries + 1}/${maxRetries}`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        retries++;
+
+        console.log(`IAP: Waiting for products... attempt ${productAttempts + 1}/${maxProductAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        productAttempts++;
       }
 
-      // @ts-ignore - cordova-plugin-purchase
-      if (typeof CdvPurchase === "undefined") {
-        console.error("IAP: CdvPurchase plugin not available after retries");
-        setState(prev => ({ ...prev, isIAPLoading: false }));
+      if (products.length === 0) {
+        console.warn("IAP: No products available after waiting. Check App Store Connect configuration.");
+        setState(prev => ({ 
+          ...prev, 
+          isIAPLoading: false, 
+          products: [],
+          iapError: "Nenhum produto encontrado. Verifique a configuração no App Store Connect." 
+        }));
         return;
       }
 
-      try {
-        // @ts-ignore - cordova-plugin-purchase
-        const { store, Platform, ProductType } = CdvPurchase;
+      setState(prev => ({ 
+        ...prev, 
+        isIAPLoading: false, 
+        products,
+        iapError: null 
+      }));
 
-        if (!store) {
-          console.error("IAP: Store not available");
-          setState(prev => ({ ...prev, isIAPLoading: false }));
-          return;
-        }
+      console.log("IAP: Initialization complete with", products.length, "products");
 
-        console.log("IAP: Initializing store...");
+    } catch (error: any) {
+      console.error("IAP: Failed to initialize store", error);
+      setState(prev => ({ 
+        ...prev, 
+        isIAPLoading: false, 
+        iapError: error.message || "Erro ao inicializar loja" 
+      }));
+    }
+  };
 
-        // Set verbose logging for debugging
-        store.verbosity = 4; // DEBUG level
-
-        const platformId = platform === "ios" ? Platform.APPLE_APPSTORE : Platform.GOOGLE_PLAY;
-
-        // Register products
-        store.register([
-          {
-            id: PRODUCT_IDS.PREMIUM_MONTHLY,
-            type: ProductType.PAID_SUBSCRIPTION,
-            platform: platformId,
-          },
-        ]);
-
-        // Handle ready event
-        store.ready(() => {
-          console.log("IAP: Store is ready");
-          setState(prev => ({ ...prev, isIAPLoading: false }));
-        });
-
-        // Handle errors
-        store.error((error: any) => {
-          console.error("IAP: Store error", error);
-        });
-
-        // Initialize the store
-        await store.initialize([platformId]);
-
-        console.log("IAP: Store initialized successfully");
-        
-        // Log available products for debugging
-        store.products.forEach((product: any) => {
-          console.log("IAP: Product available:", product.id, product.title, product.offers?.length, "offers");
-        });
-
-      } catch (error) {
-        console.error("IAP: Failed to initialize store", error);
-      } finally {
-        setState(prev => ({ ...prev, isIAPLoading: false }));
-      }
-    };
-
+  // Initial IAP setup
+  useEffect(() => {
     initializeIAP();
   }, [isNativePlatform, platform]);
+
+  // Retry loading products
+  const retryLoadProducts = async () => {
+    console.log("IAP: Retrying product load...");
+    await initializeIAP();
+  };
 
   const refreshSubscription = async () => {
     if (!user || !session) {
@@ -161,7 +379,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check subscription from Supabase database
       const { data: subscription, error } = await supabase
         .from("user_subscriptions")
         .select("*")
@@ -183,7 +400,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           daysUntilTrialExpires = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         }
 
-        // Determine effective plan type
         let effectivePlanType: "free" | "premium" | "trial" = subscription.plan_type as "free" | "premium" | "trial";
         if (isTrialActive) {
           effectivePlanType = "trial";
@@ -223,11 +439,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Wait for IAP to be ready
-    if (state.isIAPLoading) {
+    // CRITICAL: Check if products are loaded
+    if (state.products.length === 0) {
       toast({
-        title: "Aguarde",
-        description: "O sistema de compras está sendo carregado...",
+        title: "Produtos não carregados",
+        description: "Os produtos ainda não foram carregados. Toque em 'Tentar novamente' para recarregar.",
+        variant: "destructive",
       });
       return;
     }
@@ -249,7 +466,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // @ts-ignore - cordova-plugin-purchase
       const { store } = CdvPurchase;
       
-      // Log all registered products for debugging
       console.log("IAP: Registered products:", store.products.map((p: any) => ({
         id: p.id,
         title: p.title,
@@ -263,7 +479,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         console.error("IAP: Product not found:", selectedProductId);
         toast({
           title: "Produto não encontrado",
-          description: "O produto de assinatura não está disponível no momento. Verifique se o Paid Apps Agreement foi aceito no App Store Connect.",
+          description: "O produto de assinatura não está disponível. Tente recarregar a página.",
           variant: "destructive",
         });
         return;
@@ -283,13 +499,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
 
       console.log("IAP: Ordering offer...");
-      
-      // Start purchase flow
       await offer.order();
-      
       console.log("IAP: Order initiated successfully");
-      // The transaction will be handled by the store.when().approved() callback
-      // which is set up in the useInAppPurchase hook
+      
     } catch (error: any) {
       console.error("IAP: Error starting purchase:", error);
       toast({
@@ -326,7 +538,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const { store } = CdvPurchase;
       await store.restorePurchases();
 
-      // Refresh subscription status after restore
       await refreshSubscription();
 
       toast({
@@ -353,7 +564,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     refreshSubscription();
   }, [user, session]);
 
-  // Auto-refresh when window gains focus
   useEffect(() => {
     const handleFocus = () => {
       refreshSubscription();
@@ -364,6 +574,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [user, session]);
 
   const isPremium = state.planType === "premium" || (state.planType === "trial" && !state.isTrialExpired);
+  const hasProducts = state.products.length > 0;
 
   return (
     <SubscriptionContext.Provider
@@ -372,9 +583,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         refreshSubscription,
         startInAppSubscription,
         restorePurchases,
+        retryLoadProducts,
         isPremium,
         canAccessFeature,
         isNativePlatform,
+        hasProducts,
       }}
     >
       {children}
