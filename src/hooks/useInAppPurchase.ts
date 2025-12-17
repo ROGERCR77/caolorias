@@ -52,15 +52,29 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
         return;
       }
 
-      try {
-        // Wait for the store to be ready
-        // @ts-ignore - cordova-plugin-purchase types
-        if (typeof CdvPurchase === "undefined") {
-          console.log("IAP: CdvPurchase not available yet, waiting...");
-          // Wait for plugin to load
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+      // Wait for the plugin to be available with retry logic
+      let retries = 0;
+      const maxRetries = 15; // Increased for iPad
+      const retryDelay = 500;
 
+      while (retries < maxRetries) {
+        // @ts-ignore - cordova-plugin-purchase types
+        if (typeof CdvPurchase !== "undefined") {
+          break;
+        }
+        console.log(`IAP: Waiting for CdvPurchase plugin... attempt ${retries + 1}/${maxRetries}`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        retries++;
+      }
+
+      // @ts-ignore - cordova-plugin-purchase
+      if (typeof CdvPurchase === "undefined") {
+        console.error("IAP: CdvPurchase plugin not available after retries");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
         // @ts-ignore - cordova-plugin-purchase
         const { store, Platform, ProductType } = CdvPurchase;
 
@@ -71,6 +85,9 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
         }
 
         console.log("IAP: Initializing store...");
+
+        // Set verbose logging for debugging in sandbox
+        store.verbosity = 4; // DEBUG level
 
         // Register products
         const platformId = platform === "ios" ? Platform.APPLE_APPSTORE : Platform.GOOGLE_PLAY;
@@ -85,7 +102,10 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
 
         // Handle approved transactions
         store.when().approved((transaction: any) => {
-          console.log("IAP: Transaction approved", transaction);
+          console.log("IAP: Transaction approved", {
+            transactionId: transaction.transactionId,
+            productId: transaction.productId,
+          });
           handleApprovedTransaction(transaction);
         });
 
@@ -95,22 +115,40 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
           receipt.finish();
         });
 
-        // Handle errors
+        // Handle errors with detailed logging
         store.error((error: any) => {
-          console.error("IAP: Store error", error);
-          toast({
-            title: "Erro na compra",
-            description: error.message || "Ocorreu um erro ao processar a compra",
-            variant: "destructive",
+          console.error("IAP: Store error", {
+            code: error.code,
+            message: error.message,
           });
+          // Don't show toast for every error - some are informational
+          if (error.code !== 6777001) { // Skip "user cancelled" errors
+            toast({
+              title: "Erro na compra",
+              description: error.message || "Ocorreu um erro ao processar a compra",
+              variant: "destructive",
+            });
+          }
         });
 
         // Initialize the store
+        console.log("IAP: Initializing with platform:", platformId);
         await store.initialize([platformId]);
+
+        // Wait a bit for products to load
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Update products list
         const availableProducts: IAPProduct[] = [];
+        console.log("IAP: Checking products, count:", store.products.length);
+        
         store.products.forEach((product: any) => {
+          console.log("IAP: Product found:", {
+            id: product.id,
+            title: product.title,
+            offersCount: product.offers?.length || 0,
+          });
+          
           if (product.offers && product.offers.length > 0) {
             const offer = product.offers[0];
             availableProducts.push({
@@ -125,8 +163,12 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
         });
 
         setProducts(availableProducts);
-        setIsAvailable(true);
+        setIsAvailable(availableProducts.length > 0);
         console.log("IAP: Store initialized with", availableProducts.length, "products");
+        
+        if (availableProducts.length === 0) {
+          console.warn("IAP: No products available. Check App Store Connect configuration and Paid Apps Agreement.");
+        }
       } catch (error) {
         console.error("IAP: Failed to initialize store", error);
         setIsAvailable(false);
@@ -243,7 +285,7 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
       if (!isAvailable) {
         toast({
           title: "Compras indisponíveis",
-          description: "As compras no app não estão disponíveis neste momento.",
+          description: "As compras no app não estão disponíveis. Verifique se o Paid Apps Agreement foi aceito no App Store Connect.",
           variant: "destructive",
         });
         return false;
@@ -258,14 +300,18 @@ export function useInAppPurchase(): UseInAppPurchaseReturn {
         const product = store.get(productId);
 
         if (!product) {
-          throw new Error("Produto não encontrado");
+          console.error("IAP: Product not found:", productId);
+          throw new Error("Produto não encontrado. Verifique a configuração no App Store Connect.");
         }
 
         const offer = product.getOffer();
         if (!offer) {
-          throw new Error("Oferta não disponível");
+          console.error("IAP: No offer for product:", productId);
+          throw new Error("Oferta não disponível. Tente novamente mais tarde.");
         }
 
+        console.log("IAP: Starting purchase flow for offer:", offer);
+        
         // Start the purchase flow
         await offer.order();
 

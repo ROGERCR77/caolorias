@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, RotateCcw, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -22,14 +23,35 @@ const Subscription = () => {
     restorePurchases,
     isPremium,
     isNativePlatform,
+    isIAPLoading,
   } = useSubscription();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshSubscription();
     setIsRefreshing(false);
+  };
+
+  const handleSubscribe = async () => {
+    setIsPurchasing(true);
+    try {
+      await startInAppSubscription();
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsRestoring(true);
+    try {
+      await restorePurchases();
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const getPlanBadge = () => {
@@ -149,25 +171,88 @@ const Subscription = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               {!isPremium && (
                 <Button 
-                  onClick={() => startInAppSubscription()} 
+                  onClick={handleSubscribe} 
                   className="flex-1"
                   size="lg"
+                  disabled={isPurchasing || isIAPLoading}
                 >
-                  <Crown className="w-4 h-4 mr-2" />
-                  Assinar Premium - R$ 39,90/mês
+                  {(isPurchasing || isIAPLoading) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {isIAPLoading ? "Carregando..." : "Processando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="w-4 h-4 mr-2" />
+                      Assinar Premium - R$ 39,90/mês
+                    </>
+                  )}
                 </Button>
               )}
-
 
               {isNativePlatform && (
                 <Button 
                   variant="ghost" 
-                  onClick={() => restorePurchases()}
+                  onClick={handleRestore}
+                  disabled={isRestoring}
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
+                  {isRestoring ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                  )}
                   Restaurar compras
                 </Button>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Info Card - Required by Apple */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Cãolorias Premium</CardTitle>
+            <CardDescription>Informações da assinatura</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Título:</span>
+                <span className="font-medium">Cãolorias Premium</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Duração:</span>
+                <span className="font-medium">Mensal (renovação automática)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Preço:</span>
+                <span className="font-medium">R$ 39,90/mês</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t space-y-2">
+              <p className="text-xs text-muted-foreground">
+                A assinatura será cobrada na sua conta do iTunes/Google Play. 
+                A renovação automática pode ser cancelada a qualquer momento nas configurações da sua conta.
+              </p>
+              
+              {/* Legal Links - Required by Apple Guideline 3.1.2 */}
+              <div className="flex flex-wrap gap-4 pt-2">
+                <Link 
+                  to="/termos" 
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  Termos de Uso
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+                <Link 
+                  to="/privacidade" 
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  Política de Privacidade
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
