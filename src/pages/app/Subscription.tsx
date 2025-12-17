@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, RotateCcw, ExternalLink } from "lucide-react";
+import { Check, Crown, Loader2, RefreshCw, RotateCcw, ExternalLink, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -21,14 +21,19 @@ const Subscription = () => {
     refreshSubscription,
     startInAppSubscription,
     restorePurchases,
+    retryLoadProducts,
     isPremium,
     isNativePlatform,
     isIAPLoading,
+    hasProducts,
+    products,
+    iapError,
   } = useSubscription();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -51,6 +56,15 @@ const Subscription = () => {
       await restorePurchases();
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  const handleRetryLoad = async () => {
+    setIsRetrying(true);
+    try {
+      await retryLoadProducts();
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -94,6 +108,47 @@ const Subscription = () => {
       return "Seu teste Premium expirou";
     }
     return "Você está no plano gratuito. Alguns recursos avançados estão bloqueados.";
+  };
+
+  // Get button text based on state
+  const getSubscribeButtonContent = () => {
+    if (isPurchasing) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Processando...
+        </>
+      );
+    }
+    
+    if (isIAPLoading) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Carregando planos...
+        </>
+      );
+    }
+    
+    if (!hasProducts && isNativePlatform) {
+      return (
+        <>
+          <AlertCircle className="w-4 h-4 mr-2" />
+          Planos indisponíveis
+        </>
+      );
+    }
+    
+    // Show actual price from loaded products if available
+    const product = products.find(p => p.id === "caolorias_premium_1month");
+    const priceText = product?.price || "R$ 39,90";
+    
+    return (
+      <>
+        <Crown className="w-4 h-4 mr-2" />
+        Assinar Premium - {priceText}/mês
+      </>
+    );
   };
 
   if (isLoading) {
@@ -167,6 +222,29 @@ const Subscription = () => {
               </div>
             )}
 
+            {/* IAP Error message with retry */}
+            {iapError && isNativePlatform && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive mb-2">
+                  <AlertCircle className="w-4 h-4 inline mr-1" />
+                  {iapError}
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRetryLoad}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               {!isPremium && (
@@ -174,19 +252,9 @@ const Subscription = () => {
                   onClick={handleSubscribe} 
                   className="flex-1"
                   size="lg"
-                  disabled={isPurchasing || isIAPLoading}
+                  disabled={isPurchasing || isIAPLoading || (!hasProducts && isNativePlatform)}
                 >
-                  {(isPurchasing || isIAPLoading) ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isIAPLoading ? "Carregando..." : "Processando..."}
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4 mr-2" />
-                      Assinar Premium - R$ 39,90/mês
-                    </>
-                  )}
+                  {getSubscribeButtonContent()}
                 </Button>
               )}
 
@@ -205,6 +273,23 @@ const Subscription = () => {
                 </Button>
               )}
             </div>
+
+            {/* Products not loaded - show retry button */}
+            {!hasProducts && !isIAPLoading && isNativePlatform && !iapError && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="w-4 h-4" />
+                <span>Produtos não carregados.</span>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="p-0 h-auto"
+                  onClick={handleRetryLoad}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? "Carregando..." : "Tentar novamente"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -226,7 +311,9 @@ const Subscription = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Preço:</span>
-                <span className="font-medium">R$ 39,90/mês</span>
+                <span className="font-medium">
+                  {products.find(p => p.id === "caolorias_premium_1month")?.price || "R$ 39,90"}/mês
+                </span>
               </div>
             </div>
 
@@ -295,7 +382,9 @@ const Subscription = () => {
                   <h3 className="font-semibold">Premium</h3>
                   {isPremium && <Badge variant="secondary" className="text-xs">Seu plano</Badge>}
                 </div>
-                <p className="text-2xl font-bold mb-1">R$ 39,90</p>
+                <p className="text-2xl font-bold mb-1">
+                  {products.find(p => p.id === "caolorias_premium_1month")?.price || "R$ 39,90"}
+                </p>
                 <p className="text-xs text-muted-foreground mb-4">/mês</p>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
