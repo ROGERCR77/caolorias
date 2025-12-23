@@ -5,14 +5,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Stethoscope, Dog, Bell, Settings, LogOut, 
+  Stethoscope, Dog, Bell, LogOut, 
   ChevronRight, Clock, CheckCircle, XCircle, Loader2, Copy, Check,
-  FileText
+  FileText, Calendar, LayoutDashboard
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { VetStatsCard } from "@/components/vet/VetStatsCard";
+import { VetCalendar } from "@/components/vet/VetCalendar";
 
 interface VetProfile {
   id: string;
@@ -218,164 +221,192 @@ const VetDashboard = () => {
         </div>
       </header>
 
-      <main className="px-4 py-6 space-y-6 pb-24">
-        {/* Vet Code Card */}
-        <Card className="p-4 border-blue-500/20 bg-blue-500/5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Seu código de vinculação</p>
-              <p className="text-2xl font-mono font-bold text-blue-600">
-                {vetProfile?.vet_code}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={copyVetCode}
-            >
-              {codeCopied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Copiado
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copiar
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Compartilhe este código com os tutores para que eles vinculem os cães a você.
-          </p>
-        </Card>
+      <main className="px-4 py-6 pb-24">
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="w-full grid grid-cols-3 mb-6">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="pacientes" className="gap-2">
+              <Dog className="w-4 h-4" />
+              <span className="hidden sm:inline">Pacientes</span>
+            </TabsTrigger>
+            <TabsTrigger value="agenda" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Agenda</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Pending Links */}
-        {pendingLinks.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-amber-500" />
-              <h2 className="font-semibold">Solicitações pendentes</h2>
-              <Badge variant="secondary" className="bg-amber-500/10 text-amber-600">
-                {pendingLinks.length}
-              </Badge>
-            </div>
-
-            {pendingLinks.map((link) => (
-              <Card key={link.id} className="p-4 border-amber-500/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                    {link.dog?.photo_url ? (
-                      <img src={link.dog.photo_url} alt={link.dog?.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Dog className="w-6 h-6 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{link.dog?.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      Tutor: {link.tutor?.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3 inline mr-1" />
-                      {format(new Date(link.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="text-red-500 hover:bg-red-50"
-                      onClick={() => handleRejectLink(link.id)}
-                    >
-                      <XCircle className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      className="bg-green-500 hover:bg-green-600"
-                      onClick={() => handleAcceptLink(link.id)}
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                    </Button>
-                  </div>
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="space-y-6 mt-0">
+            {/* Vet Code Card */}
+            <Card className="p-4 border-blue-500/20 bg-blue-500/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Seu código de vinculação</p>
+                  <p className="text-2xl font-mono font-bold text-blue-600">
+                    {vetProfile?.vet_code}
+                  </p>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Unread Reports Badge */}
-        {unreadReportsCount > 0 && (
-          <Card className="p-4 border-blue-500/30 bg-blue-500/5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <FileText className="w-5 h-5 text-blue-500" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={copyVetCode}
+                >
+                  {codeCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copiar
+                    </>
+                  )}
+                </Button>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-blue-600">
-                  {unreadReportsCount} {unreadReportsCount === 1 ? "novo relatório" : "novos relatórios"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Clique em um paciente para visualizar
-                </p>
-              </div>
-              <Badge className="bg-blue-500 text-white">
-                {unreadReportsCount}
-              </Badge>
-            </div>
-          </Card>
-        )}
-
-        {/* Active Dogs */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Dog className="w-5 h-5 text-blue-500" />
-            <h2 className="font-semibold">Meus pacientes</h2>
-            <Badge variant="secondary">
-              {linkedDogs.length}
-            </Badge>
-          </div>
-
-          {linkedDogs.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">
-                Nenhum paciente vinculado ainda.
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Compartilhe seu código com os tutores.
+              <p className="text-xs text-muted-foreground mt-2">
+                Compartilhe este código com os tutores para que eles vinculem os cães a você.
               </p>
             </Card>
-          ) : (
-            linkedDogs.map((link) => (
-              <Link key={link.id} to={`/vet/dog/${link.dog_id}`}>
-                <Card className="p-4 press-effect hover:border-blue-500/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
-                      {link.dog?.photo_url ? (
-                        <img src={link.dog.photo_url} alt={link.dog?.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Dog className="w-7 h-7 text-muted-foreground" />
-                      )}
+
+            {/* Stats */}
+            <VetStatsCard />
+
+            {/* Pending Links */}
+            {pendingLinks.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-amber-500" />
+                  <h2 className="font-semibold">Solicitações pendentes</h2>
+                  <Badge variant="secondary" className="bg-amber-500/10 text-amber-600">
+                    {pendingLinks.length}
+                  </Badge>
+                </div>
+
+                {pendingLinks.map((link) => (
+                  <Card key={link.id} className="p-4 border-amber-500/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                        {link.dog?.photo_url ? (
+                          <img src={link.dog.photo_url} alt={link.dog?.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Dog className="w-6 h-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{link.dog?.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          Tutor: {link.tutor?.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3 inline mr-1" />
+                          {format(new Date(link.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="text-red-500 hover:bg-red-50"
+                          onClick={() => handleRejectLink(link.id)}
+                        >
+                          <XCircle className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          className="bg-green-500 hover:bg-green-600"
+                          onClick={() => handleAcceptLink(link.id)}
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{link.dog?.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {link.dog?.breed || "Sem raça definida"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Tutor: {link.tutor?.name}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Unread Reports Badge */}
+            {unreadReportsCount > 0 && (
+              <Card className="p-4 border-blue-500/30 bg-blue-500/5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <FileText className="w-5 h-5 text-blue-500" />
                   </div>
-                </Card>
-              </Link>
-            ))
-          )}
-        </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-blue-600">
+                      {unreadReportsCount} {unreadReportsCount === 1 ? "novo relatório" : "novos relatórios"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Clique em um paciente para visualizar
+                    </p>
+                  </div>
+                  <Badge className="bg-blue-500 text-white">
+                    {unreadReportsCount}
+                  </Badge>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Pacientes Tab */}
+          <TabsContent value="pacientes" className="space-y-3 mt-0">
+            <div className="flex items-center gap-2 mb-4">
+              <Dog className="w-5 h-5 text-blue-500" />
+              <h2 className="font-semibold">Meus pacientes</h2>
+              <Badge variant="secondary">
+                {linkedDogs.length}
+              </Badge>
+            </div>
+
+            {linkedDogs.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Dog className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">
+                  Nenhum paciente vinculado ainda.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Compartilhe seu código com os tutores.
+                </p>
+              </Card>
+            ) : (
+              linkedDogs.map((link) => (
+                <Link key={link.id} to={`/vet/dog/${link.dog_id}`}>
+                  <Card className="p-4 press-effect hover:border-blue-500/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
+                        {link.dog?.photo_url ? (
+                          <img src={link.dog.photo_url} alt={link.dog?.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Dog className="w-7 h-7 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{link.dog?.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {link.dog?.breed || "Sem raça definida"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Tutor: {link.tutor?.name}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </Card>
+                </Link>
+              ))
+            )}
+          </TabsContent>
+
+          {/* Agenda Tab */}
+          <TabsContent value="agenda" className="mt-0">
+            <VetCalendar />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

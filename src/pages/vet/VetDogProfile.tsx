@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,12 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Dog, Plus, Syringe, FileText, 
   Microscope, MessageSquare, Calendar, Loader2, Stethoscope,
-  ChartBar, Scale, Utensils, Activity, Heart
+  ChartBar, Scale, Utensils, Activity, Heart, Camera, X, Image as ImageIcon
 } from "lucide-react";
 import { HealthHistoryTab } from "@/components/vet/HealthHistoryTab";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { compressImage } from "@/lib/imageCompression";
 
 type NoteType = "consulta" | "vacina" | "exame" | "observacao";
 
@@ -40,6 +41,7 @@ interface VetNote {
   content: string | null;
   scheduled_date: string | null;
   created_at: string;
+  photo_url: string | null;
 }
 
 interface TutorReport {
@@ -98,6 +100,10 @@ const VetDogProfile = () => {
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
   const [newNoteScheduledDate, setNewNoteScheduledDate] = useState("");
+  const [newNotePhoto, setNewNotePhoto] = useState<File | null>(null);
+  const [newNotePhotoPreview, setNewNotePhotoPreview] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -137,7 +143,7 @@ const VetDogProfile = () => {
         // Fetch notes
         const { data: notesData, error: notesError } = await supabase
           .from("vet_notes")
-          .select("*")
+          .select("*, photo_url")
           .eq("vet_dog_link_id", typedLink.id)
           .order("created_at", { ascending: false });
 
@@ -178,6 +184,38 @@ const VetDogProfile = () => {
     fetchData();
   }, [user, dogId, toast]);
 
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const compressed = await compressImage(file, 1024, 0.8);
+      // Convert Blob to File
+      const compressedFile = new File([compressed], file.name, { type: compressed.type });
+      setNewNotePhoto(compressedFile);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewNotePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error("Error compressing image:", error);
+      toast({
+        title: "Erro ao processar imagem",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removePhoto = () => {
+    setNewNotePhoto(null);
+    setNewNotePhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleAddNote = async () => {
     if (!user || !link || !newNoteTitle.trim()) {
       toast({
@@ -190,6 +228,31 @@ const VetDogProfile = () => {
     setIsAddingNote(true);
 
     try {
+      let photoUrl: string | null = null;
+
+      // Upload photo if exists
+      if (newNotePhoto) {
+        setIsUploadingPhoto(true);
+        const fileExt = newNotePhoto.name.split('.').pop() || 'jpg';
+        const fileName = `vet-notes/${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("dog-photos")
+          .upload(fileName, newNotePhoto, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("dog-photos")
+          .getPublicUrl(fileName);
+
+        photoUrl = urlData.publicUrl;
+        setIsUploadingPhoto(false);
+      }
+
       const { data, error } = await supabase
         .from("vet_notes")
         .insert({
@@ -199,16 +262,17 @@ const VetDogProfile = () => {
           title: newNoteTitle.trim(),
           content: newNoteContent.trim() || null,
           scheduled_date: newNoteScheduledDate || null,
+          photo_url: photoUrl,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Get tutor_user_id from the link to send push notification
+      // Get tutor_user_id from the link to send push notification and create reminder
       const { data: linkData } = await supabase
         .from("vet_dog_links")
-        .select("tutor_user_id")
+        .select("tutor_user_id, dog_id")
         .eq("id", link.id)
         .single();
 
@@ -219,14 +283,40 @@ const VetDogProfile = () => {
         .eq("user_id", user.id)
         .single();
 
+      // If it's a vaccine with a scheduled date, create automatic reminder for tutor
+      if (newNoteType === "vacina" && newNoteScheduledDate && linkData) {
+        try {
+          await supabase.from("reminders").insert({
+            user_id: linkData.tutor_user_id,
+            dog_id: linkData.dog_id,
+            title: `Reforço: ${newNoteTitle.trim()}`,
+            message: `Lembrete de reforço da vacina ${newNoteTitle.trim()} para ${dog?.name}. Agendado por Dr(a). ${vetProfile?.name || "Veterinário"}.`,
+            type: "vacina",
+            time: "09:00",
+            scheduled_date: newNoteScheduledDate,
+            days_of_week: [],
+            enabled: true,
+          });
+          console.log("Vaccine reminder created for tutor");
+        } catch (reminderError) {
+          console.log("Failed to create vaccine reminder (non-blocking):", reminderError);
+        }
+      }
+
       // Send push notification to tutor
       if (linkData) {
         try {
           await supabase.functions.invoke("send-push-notification", {
             body: {
               user_id: linkData.tutor_user_id,
-              title: "Nova observação do veterinário",
-              message: `Dr(a). ${vetProfile?.name || "Veterinário"} adicionou uma observação sobre ${dog?.name}.`,
+              title: newNoteType === "vacina" 
+                ? "Nova vacina registrada 💉" 
+                : "Nova observação do veterinário",
+              message: `Dr(a). ${vetProfile?.name || "Veterinário"} ${
+                newNoteType === "vacina" 
+                  ? `registrou a vacina "${newNoteTitle}" para ${dog?.name}${newNoteScheduledDate ? ". Lembrete de reforço criado!" : ""}`
+                  : `adicionou uma observação sobre ${dog?.name}.`
+              }`,
               data: {
                 type: "vet_note",
                 dog_id: dogId,
@@ -245,8 +335,12 @@ const VetDogProfile = () => {
       resetForm();
 
       toast({
-        title: "Registro adicionado! ✅",
-        description: "O tutor poderá visualizar no app.",
+        title: newNoteType === "vacina" && newNoteScheduledDate 
+          ? "Vacina registrada com lembrete! 💉" 
+          : "Registro adicionado! ✅",
+        description: newNoteType === "vacina" && newNoteScheduledDate
+          ? "O tutor receberá um lembrete automático antes do reforço."
+          : "O tutor poderá visualizar no app.",
       });
     } catch (error) {
       console.error("Error adding note:", error);
@@ -256,6 +350,7 @@ const VetDogProfile = () => {
       });
     } finally {
       setIsAddingNote(false);
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -264,6 +359,11 @@ const VetDogProfile = () => {
     setNewNoteTitle("");
     setNewNoteContent("");
     setNewNoteScheduledDate("");
+    setNewNotePhoto(null);
+    setNewNotePhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const calculateAge = (birthDate: string | null) => {
