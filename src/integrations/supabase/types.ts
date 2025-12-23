@@ -1042,6 +1042,7 @@ export type Database = {
           id: string
           report_data: Json
           tutor_user_id: string
+          viewed_by_vet: boolean
         }
         Insert: {
           created_at?: string
@@ -1050,6 +1051,7 @@ export type Database = {
           id?: string
           report_data: Json
           tutor_user_id: string
+          viewed_by_vet?: boolean
         }
         Update: {
           created_at?: string
@@ -1058,6 +1060,7 @@ export type Database = {
           id?: string
           report_data?: Json
           tutor_user_id?: string
+          viewed_by_vet?: boolean
         }
         Relationships: [
           {
