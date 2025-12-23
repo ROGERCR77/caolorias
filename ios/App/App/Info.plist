@@ -50,10 +50,12 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>O Cãolorias precisa acessar sua câmera para tirar fotos do seu cão e registros de saúde.</string>
+	<string>Cãolorias usa a câmera para você tirar fotos do seu cão, registrar a carteira de vacinação e documentar registros de saúde para acompanhamento veterinário.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O Cãolorias precisa acessar suas fotos para adicionar imagens do seu cão e registros de saúde.</string>
+	<string>Cãolorias acessa sua biblioteca de fotos para você adicionar imagens do seu cão ao perfil, carteira de vacinação e registros de saúde.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>O Cãolorias pode usar sua localização para enviar notificações personalizadas baseadas na sua região.</string>
+	<string>Cãolorias pode usar sua localização para personalizar lembretes e notificações baseadas no seu fuso horário.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Cãolorias não rastreia você para fins publicitários. Não exibimos anúncios e não compartilhamos seus dados com anunciantes.</string>
 </dict>
 </plist>
