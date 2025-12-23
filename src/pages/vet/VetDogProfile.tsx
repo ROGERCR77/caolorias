@@ -92,7 +92,7 @@ const VetDogProfile = () => {
           .from("vet_dog_links")
           .select(`
             id,
-            tutor:profiles!vet_dog_links_tutor_user_id_fkey(name)
+            tutor:profiles!vet_dog_links_tutor_profile_fkey(name)
           `)
           .eq("vet_user_id", user.id)
           .eq("dog_id", dogId)

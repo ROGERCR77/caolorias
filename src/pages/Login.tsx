@@ -49,28 +49,23 @@ const Login = () => {
 
         const userRole = roleData?.role || "tutor";
         
-        // Validate mode matches role
-        if (mode === "vet" && userRole !== "vet") {
+        // Auto-detect and redirect based on role (don't logout on wrong mode)
+        if (userRole === "vet") {
           toast({
-            title: "Acesso negado",
-            description: "Esta conta não é de veterinário. Use o login de tutor.",
-            variant: "destructive",
+            title: "Bem-vindo, Doutor(a)! 🩺",
+            description: "Login realizado com sucesso.",
           });
-          await supabase.auth.signOut();
-          setIsLoading(false);
+          navigate("/vet/dashboard");
           return;
         }
 
-        if (mode === "tutor" && userRole === "vet") {
-          toast({
-            title: "Conta de veterinário",
-            description: "Use o login de veterinário para acessar.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return;
-        }
+        // Default to tutor
+        toast({
+          title: "Bem-vindo de volta! 🐕",
+          description: "Login realizado com sucesso.",
+        });
+        navigate("/app/hoje");
+        return;
 
         toast({
           title: mode === "vet" ? "Bem-vindo, Doutor(a)! 🩺" : "Bem-vindo de volta! 🐕",

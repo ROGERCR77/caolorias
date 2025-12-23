@@ -71,7 +71,7 @@ const VetDashboard = () => {
             status,
             created_at,
             dog:dogs(id, name, breed, photo_url),
-            tutor:profiles!vet_dog_links_tutor_user_id_fkey(name)
+            tutor:profiles!vet_dog_links_tutor_profile_fkey(name)
           `)
           .eq("vet_user_id", user.id)
           .order("created_at", { ascending: false });

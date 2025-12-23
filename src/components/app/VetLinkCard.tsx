@@ -68,7 +68,7 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
             id,
             vet_user_id,
             status,
-            vet_profile:vet_profiles!vet_dog_links_vet_user_id_fkey(
+            vet_profile:vet_profiles!vet_dog_links_vet_profile_fkey(
               id, user_id, name, crmv, uf, clinic_name, vet_code
             )
           `)
