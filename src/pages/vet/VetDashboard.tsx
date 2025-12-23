@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Stethoscope, Dog, Bell, Settings, LogOut, 
-  ChevronRight, Clock, CheckCircle, XCircle, Loader2, Copy, Check
+  ChevronRight, Clock, CheckCircle, XCircle, Loader2, Copy, Check,
+  FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -44,6 +45,7 @@ const VetDashboard = () => {
   const [vetProfile, setVetProfile] = useState<VetProfile | null>(null);
   const [linkedDogs, setLinkedDogs] = useState<LinkedDog[]>([]);
   const [pendingLinks, setPendingLinks] = useState<LinkedDog[]>([]);
+  const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -87,6 +89,18 @@ const VetDashboard = () => {
 
         setLinkedDogs(typedLinks.filter(l => l.status === "active"));
         setPendingLinks(typedLinks.filter(l => l.status === "pending"));
+
+        // Count unread reports from linked dogs
+        const activeDogIds = typedLinks.filter(l => l.status === "active").map(l => l.dog_id);
+        if (activeDogIds.length > 0) {
+          const { count } = await supabase
+            .from("tutor_health_reports")
+            .select("*", { count: "exact", head: true })
+            .in("dog_id", activeDogIds)
+            .eq("viewed_by_vet", false);
+          
+          setUnreadReportsCount(count || 0);
+        }
       } catch (error) {
         console.error("Error fetching vet data:", error);
         toast({
@@ -290,6 +304,28 @@ const VetDashboard = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {/* Unread Reports Badge */}
+        {unreadReportsCount > 0 && (
+          <Card className="p-4 border-blue-500/30 bg-blue-500/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <FileText className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-blue-600">
+                  {unreadReportsCount} {unreadReportsCount === 1 ? "novo relatório" : "novos relatórios"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Clique em um paciente para visualizar
+                </p>
+              </div>
+              <Badge className="bg-blue-500 text-white">
+                {unreadReportsCount}
+              </Badge>
+            </div>
+          </Card>
         )}
 
         {/* Active Dogs */}

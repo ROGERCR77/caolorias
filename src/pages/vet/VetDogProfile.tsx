@@ -146,13 +146,22 @@ const VetDogProfile = () => {
         // Fetch tutor reports
         const { data: reportsData } = await supabase
           .from("tutor_health_reports")
-          .select("id, generated_at, report_data")
+          .select("id, generated_at, report_data, viewed_by_vet")
           .eq("dog_id", dogId)
           .order("generated_at", { ascending: false })
           .limit(10);
 
         if (reportsData) {
           setTutorReports(reportsData as unknown as TutorReport[]);
+          
+          // Mark unread reports as viewed
+          const unreadIds = reportsData.filter(r => !r.viewed_by_vet).map(r => r.id);
+          if (unreadIds.length > 0) {
+            await supabase
+              .from("tutor_health_reports")
+              .update({ viewed_by_vet: true })
+              .in("id", unreadIds);
+          }
         }
       } catch (error) {
         console.error("Error fetching dog data:", error);
@@ -194,6 +203,41 @@ const VetDogProfile = () => {
         .single();
 
       if (error) throw error;
+
+      // Get tutor_user_id from the link to send push notification
+      const { data: linkData } = await supabase
+        .from("vet_dog_links")
+        .select("tutor_user_id")
+        .eq("id", link.id)
+        .single();
+
+      // Get vet profile for the notification message
+      const { data: vetProfile } = await supabase
+        .from("vet_profiles")
+        .select("name")
+        .eq("user_id", user.id)
+        .single();
+
+      // Send push notification to tutor
+      if (linkData) {
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              user_id: linkData.tutor_user_id,
+              title: "Nova observação do veterinário",
+              message: `Dr(a). ${vetProfile?.name || "Veterinário"} adicionou uma observação sobre ${dog?.name}.`,
+              data: {
+                type: "vet_note",
+                dog_id: dogId,
+                note_type: newNoteType,
+              },
+            },
+          });
+          console.log("Push notification sent to tutor:", linkData.tutor_user_id);
+        } catch (pushError) {
+          console.log("Push notification failed (non-blocking):", pushError);
+        }
+      }
 
       setNotes(prev => [data as VetNote, ...prev]);
       setDialogOpen(false);

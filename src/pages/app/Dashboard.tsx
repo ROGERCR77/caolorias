@@ -6,6 +6,7 @@ import { AIInsightsCard } from "@/components/app/AIInsightsCard";
 import { HealthQuickCard } from "@/components/app/HealthQuickCard";
 import { WeeklyInsightsCard } from "@/components/app/WeeklyInsightsCard";
 import { StreakCard } from "@/components/app/StreakCard";
+import { VetAppointmentsCard } from "@/components/app/VetAppointmentsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -216,6 +217,9 @@ const Dashboard = () => {
 
             {/* Health Quick Card */}
             <HealthQuickCard />
+
+            {/* Vet Appointments Card */}
+            <VetAppointmentsCard />
 
             {/* Goal progress */}
             {(selectedDog.meta_kcal_dia || selectedDog.meta_gramas_dia) && (

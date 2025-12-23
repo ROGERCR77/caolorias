@@ -223,6 +223,35 @@ export default function VetReport() {
         tutor_user_id: user.id,
         report_data: reportData as unknown as Json,
       }]);
+
+      // Send push notification to linked vets
+      try {
+        const { data: activeLinks } = await supabase
+          .from("vet_dog_links")
+          .select("vet_user_id")
+          .eq("dog_id", selectedDogId)
+          .eq("tutor_user_id", user.id)
+          .eq("status", "active");
+
+        if (activeLinks && activeLinks.length > 0) {
+          for (const link of activeLinks) {
+            await supabase.functions.invoke("send-push-notification", {
+              body: {
+                user_id: link.vet_user_id,
+                title: "Novo relatório disponível",
+                message: `O tutor gerou um novo relatório de saúde para ${selectedDog?.name}.`,
+                data: {
+                  type: "tutor_report",
+                  dog_id: selectedDogId,
+                },
+              },
+            });
+          }
+          console.log("Push notifications sent to vets");
+        }
+      } catch (pushError) {
+        console.log("Push notification failed (non-blocking):", pushError);
+      }
       
       toast.success("Relatório gerado e compartilhado com seu veterinário!");
     } catch (error) {
