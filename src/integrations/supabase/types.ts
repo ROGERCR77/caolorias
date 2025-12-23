@@ -1063,6 +1063,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streaks: {
         Row: {
           current_streak: number
@@ -1138,6 +1159,124 @@ export type Database = {
         }
         Relationships: []
       }
+      vet_dog_links: {
+        Row: {
+          created_at: string
+          dog_id: string
+          id: string
+          status: string
+          tutor_user_id: string
+          updated_at: string
+          vet_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          id?: string
+          status?: string
+          tutor_user_id: string
+          updated_at?: string
+          vet_user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          id?: string
+          status?: string
+          tutor_user_id?: string
+          updated_at?: string
+          vet_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_dog_links_dog_id_fkey"
+            columns: ["dog_id"]
+            isOneToOne: false
+            referencedRelation: "dogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vet_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          note_type: string
+          scheduled_date: string | null
+          title: string
+          vet_dog_link_id: string
+          vet_user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          note_type: string
+          scheduled_date?: string | null
+          title: string
+          vet_dog_link_id: string
+          vet_user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          note_type?: string
+          scheduled_date?: string | null
+          title?: string
+          vet_dog_link_id?: string
+          vet_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_notes_vet_dog_link_id_fkey"
+            columns: ["vet_dog_link_id"]
+            isOneToOne: false
+            referencedRelation: "vet_dog_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vet_profiles: {
+        Row: {
+          clinic_name: string | null
+          created_at: string
+          crmv: string
+          id: string
+          name: string
+          phone: string | null
+          uf: string
+          updated_at: string
+          user_id: string
+          vet_code: string
+        }
+        Insert: {
+          clinic_name?: string | null
+          created_at?: string
+          crmv: string
+          id?: string
+          name: string
+          phone?: string | null
+          uf: string
+          updated_at?: string
+          user_id: string
+          vet_code?: string
+        }
+        Update: {
+          clinic_name?: string | null
+          created_at?: string
+          crmv?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          uf?: string
+          updated_at?: string
+          user_id?: string
+          vet_code?: string
+        }
+        Relationships: []
+      }
       weekly_insights: {
         Row: {
           created_at: string
@@ -1209,9 +1348,16 @@ export type Database = {
     }
     Functions: {
       delete_user: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "tutor" | "vet"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1338,6 +1484,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["tutor", "vet"],
+    },
   },
 } as const
