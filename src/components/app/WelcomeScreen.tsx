@@ -45,6 +45,14 @@ export const WelcomeScreen = () => {
         <p className="text-sm text-muted-foreground">
           Organize a alimentação natural do seu amigo de quatro patas
         </p>
+
+        {/* Vet Link */}
+        <button
+          onClick={() => navigate("/login?mode=vet")}
+          className="text-sm text-primary font-medium hover:underline transition-colors"
+        >
+          Sou Veterinário →
+        </button>
       </div>
     </div>
   );
