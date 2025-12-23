@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Dog, Plus, Syringe, FileText, 
   Microscope, MessageSquare, Calendar, Loader2, Stethoscope,
-  ChartBar, Scale, Utensils, Activity
+  ChartBar, Scale, Utensils, Activity, Heart
 } from "lucide-react";
+import { HealthHistoryTab } from "@/components/vet/HealthHistoryTab";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -433,8 +434,11 @@ const VetDogProfile = () => {
 
         {/* Notes Tabs */}
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full grid grid-cols-6">
+          <TabsList className="w-full grid grid-cols-7">
             <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="historico" className="text-green-600">
+              <Heart className="w-4 h-4" />
+            </TabsTrigger>
             <TabsTrigger value="relatorios">
               <ChartBar className="w-4 h-4" />
             </TabsTrigger>
@@ -461,6 +465,11 @@ const VetDogProfile = () => {
             ) : (
               notes.map((note) => <NoteCard key={note.id} note={note} />)
             )}
+          </TabsContent>
+
+          {/* Aba de Histórico de Saúde */}
+          <TabsContent value="historico" className="mt-4">
+            <HealthHistoryTab dogId={dogId!} />
           </TabsContent>
 
           {/* Aba de Relatórios do Tutor */}
