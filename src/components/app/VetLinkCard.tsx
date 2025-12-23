@@ -140,6 +140,13 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
 
     setIsSaving(true);
     try {
+      // First, get the dog name for the notification
+      const { data: dogData } = await supabase
+        .from("dogs")
+        .select("name")
+        .eq("id", dogId)
+        .single();
+
       const { data, error } = await supabase
         .from("vet_dog_links")
         .insert({
@@ -152,6 +159,25 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
         .single();
 
       if (error) throw error;
+
+      // Send push notification to the vet
+      try {
+        await supabase.functions.invoke("send-push-notification", {
+          body: {
+            user_id: searchResult.user_id,
+            title: "Nova solicitação de vínculo",
+            message: `Um tutor quer vincular o cão ${dogData?.name || "desconhecido"} ao seu perfil.`,
+            data: {
+              type: "vet_link_request",
+              link_id: data.id,
+              dog_id: dogId,
+            },
+          },
+        });
+        console.log("Push notification sent to vet:", searchResult.user_id);
+      } catch (pushError) {
+        console.log("Push notification failed (non-blocking):", pushError);
+      }
 
       setVetLinks(prev => [...prev, {
         id: data.id,
