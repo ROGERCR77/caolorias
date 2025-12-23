@@ -83,7 +83,7 @@ export default function VetReport() {
           .from("vet_dog_links")
           .select(`
             id,
-            vet_profile:vet_profiles!vet_dog_links_vet_user_id_fkey(
+            vet_profile:vet_profiles!vet_dog_links_vet_profile_fkey(
               name, crmv, uf, clinic_name
             )
           `)
@@ -99,46 +99,42 @@ export default function VetReport() {
           setLinkedVets(typedLinks);
         }
 
-        // Fetch notes from linked vets
-        const { data: notes } = await supabase
-          .from("vet_notes")
-          .select(`
-            id,
-            title,
-            content,
-            note_type,
-            scheduled_date,
-            created_at,
-            vet_dog_link:vet_dog_links!vet_notes_vet_dog_link_id_fkey(
-              dog_id,
-              vet_profile:vet_profiles!vet_dog_links_vet_user_id_fkey(
+        // Fetch notes for this specific dog - more efficient query
+        // Get link IDs for this dog first
+        const linkIds = links?.map(l => l.id) || [];
+        
+        if (linkIds.length > 0) {
+          const { data: notes } = await supabase
+            .from("vet_notes")
+            .select(`
+              id,
+              title,
+              content,
+              note_type,
+              scheduled_date,
+              created_at,
+              vet_dog_link_id,
+              vet_profile:vet_profiles!vet_notes_vet_profile_fkey(
                 name, crmv, uf, clinic_name
               )
-            )
-          `)
-          .order("created_at", { ascending: false });
+            `)
+            .in("vet_dog_link_id", linkIds)
+            .order("created_at", { ascending: false });
 
-        if (notes) {
-          const filteredNotes = notes
-            .filter((n: any) => {
-              const link = Array.isArray(n.vet_dog_link) ? n.vet_dog_link[0] : n.vet_dog_link;
-              return link?.dog_id === selectedDogId;
-            })
-            .map((n: any) => {
-              const link = Array.isArray(n.vet_dog_link) ? n.vet_dog_link[0] : n.vet_dog_link;
-              const vetProfile = Array.isArray(link?.vet_profile) ? link.vet_profile[0] : link?.vet_profile;
-              return {
-                id: n.id,
-                title: n.title,
-                content: n.content,
-                note_type: n.note_type,
-                scheduled_date: n.scheduled_date,
-                created_at: n.created_at,
-                vet_profile: vetProfile,
-              };
-            })
-            .filter((n: any) => n.vet_profile) as VetNote[];
-          setVetNotes(filteredNotes);
+          if (notes) {
+            const typedNotes = notes.map((n: any) => ({
+              id: n.id,
+              title: n.title,
+              content: n.content,
+              note_type: n.note_type,
+              scheduled_date: n.scheduled_date,
+              created_at: n.created_at,
+              vet_profile: Array.isArray(n.vet_profile) ? n.vet_profile[0] : n.vet_profile,
+            })).filter((n: any) => n.vet_profile) as VetNote[];
+            setVetNotes(typedNotes);
+          }
+        } else {
+          setVetNotes([]);
         }
       } catch (error) {
         console.error("Error fetching vet data:", error);

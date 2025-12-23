@@ -85,7 +85,23 @@ const CadastroVet = () => {
         throw new Error("Erro ao criar conta. Tente novamente.");
       }
 
-      // 2. Add vet role
+      // 2. Wait for session to be established (auto-confirm is enabled)
+      // This ensures RLS policies can validate the user
+      let sessionReady = false;
+      for (let i = 0; i < 10; i++) {
+        const { data: session } = await supabase.auth.getSession();
+        if (session?.session?.user?.id === authData.user.id) {
+          sessionReady = true;
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      if (!sessionReady) {
+        throw new Error("Erro ao estabelecer sessão. Tente fazer login.");
+      }
+
+      // 3. Add vet role
       const { error: roleError } = await supabase
         .from("user_roles")
         .insert({ user_id: authData.user.id, role: "vet" });
@@ -95,7 +111,7 @@ const CadastroVet = () => {
         throw new Error("Erro ao configurar perfil veterinário.");
       }
 
-      // 3. Create vet profile
+      // 4. Create vet profile
       const { error: profileError } = await supabase
         .from("vet_profiles")
         .insert({

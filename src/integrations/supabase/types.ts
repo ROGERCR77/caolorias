@@ -1195,6 +1195,20 @@ export type Database = {
             referencedRelation: "dogs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vet_dog_links_tutor_profile_fkey"
+            columns: ["tutor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "vet_dog_links_vet_profile_fkey"
+            columns: ["vet_user_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       vet_notes: {
@@ -1235,6 +1249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vet_dog_links"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vet_notes_vet_profile_fkey"
+            columns: ["vet_user_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
