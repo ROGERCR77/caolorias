@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { useData } from "@/contexts/DataContext";
@@ -13,10 +13,50 @@ import { format, subDays, parseISO, differenceInYears, differenceInMonths } from
 import { ptBR } from "date-fns/locale";
 import { 
   Loader2, FileText, Download, Dog as DogIcon,
-  Scale, Utensils, Activity, Heart, Crown, Printer
+  Scale, Utensils, Activity, Heart, Crown, Printer,
+  Stethoscope, ClipboardList, Syringe, Calendar, MessageSquare
 } from "lucide-react";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
 import jsPDF from "jspdf";
+
+interface VetNote {
+  id: string;
+  title: string;
+  content: string | null;
+  note_type: string;
+  scheduled_date: string | null;
+  created_at: string;
+  vet_profile: {
+    name: string;
+    crmv: string;
+    uf: string;
+    clinic_name: string | null;
+  };
+}
+
+interface LinkedVet {
+  id: string;
+  vet_profile: {
+    name: string;
+    crmv: string;
+    uf: string;
+    clinic_name: string | null;
+  };
+}
+
+const NOTE_TYPE_ICONS: Record<string, React.ReactNode> = {
+  consulta: <ClipboardList className="h-4 w-4" />,
+  vacina: <Syringe className="h-4 w-4" />,
+  exame: <FileText className="h-4 w-4" />,
+  observacao: <MessageSquare className="h-4 w-4" />,
+};
+
+const NOTE_TYPE_LABELS: Record<string, string> = {
+  consulta: "Consulta",
+  vacina: "Vacina",
+  exame: "Exame",
+  observacao: "Observação",
+};
 
 export default function VetReport() {
   const { user } = useAuth();
@@ -26,9 +66,87 @@ export default function VetReport() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [healthData, setHealthData] = useState<any>(null);
+  const [vetNotes, setVetNotes] = useState<VetNote[]>([]);
+  const [linkedVets, setLinkedVets] = useState<LinkedVet[]>([]);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
+
+  // Fetch vet notes for the selected dog
+  useEffect(() => {
+    if (!user || !selectedDogId) return;
+
+    const fetchVetData = async () => {
+      try {
+        // Fetch linked vets and their notes
+        const { data: links } = await supabase
+          .from("vet_dog_links")
+          .select(`
+            id,
+            vet_profile:vet_profiles!vet_dog_links_vet_user_id_fkey(
+              name, crmv, uf, clinic_name
+            )
+          `)
+          .eq("dog_id", selectedDogId)
+          .eq("tutor_user_id", user.id)
+          .eq("status", "active");
+
+        if (links) {
+          const typedLinks = links.map(l => ({
+            ...l,
+            vet_profile: Array.isArray(l.vet_profile) ? l.vet_profile[0] : l.vet_profile,
+          })).filter(l => l.vet_profile) as LinkedVet[];
+          setLinkedVets(typedLinks);
+        }
+
+        // Fetch notes from linked vets
+        const { data: notes } = await supabase
+          .from("vet_notes")
+          .select(`
+            id,
+            title,
+            content,
+            note_type,
+            scheduled_date,
+            created_at,
+            vet_dog_link:vet_dog_links!vet_notes_vet_dog_link_id_fkey(
+              dog_id,
+              vet_profile:vet_profiles!vet_dog_links_vet_user_id_fkey(
+                name, crmv, uf, clinic_name
+              )
+            )
+          `)
+          .order("created_at", { ascending: false });
+
+        if (notes) {
+          const filteredNotes = notes
+            .filter((n: any) => {
+              const link = Array.isArray(n.vet_dog_link) ? n.vet_dog_link[0] : n.vet_dog_link;
+              return link?.dog_id === selectedDogId;
+            })
+            .map((n: any) => {
+              const link = Array.isArray(n.vet_dog_link) ? n.vet_dog_link[0] : n.vet_dog_link;
+              const vetProfile = Array.isArray(link?.vet_profile) ? link.vet_profile[0] : link?.vet_profile;
+              return {
+                id: n.id,
+                title: n.title,
+                content: n.content,
+                note_type: n.note_type,
+                scheduled_date: n.scheduled_date,
+                created_at: n.created_at,
+                vet_profile: vetProfile,
+              };
+            })
+            .filter((n: any) => n.vet_profile) as VetNote[];
+          setVetNotes(filteredNotes);
+        }
+      } catch (error) {
+        console.error("Error fetching vet data:", error);
+      }
+    };
+
+    fetchVetData();
+  }, [user, selectedDogId]);
 
   // Calculate dog age
   const calculateAge = (birthDate: string | null) => {
@@ -438,6 +556,42 @@ export default function VetReport() {
                     <p className="font-semibold capitalize">{selectedDog.feeding_type}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Veterinarian Notes Section */}
+          {(vetNotes.length > 0 || linkedVets.length > 0) && (
+            <Card className="border-blue-500/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-blue-500" />
+                  Anotações do Veterinário
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {linkedVets.map(vet => (
+                  <Badge key={vet.id} variant="secondary" className="gap-1 mr-2">
+                    <Stethoscope className="h-3 w-3" />
+                    {vet.vet_profile.name} - CRMV {vet.vet_profile.crmv}/{vet.vet_profile.uf}
+                  </Badge>
+                ))}
+                {vetNotes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma anotação ainda.</p>
+                ) : (
+                  vetNotes.slice(0, 5).map(note => (
+                    <div key={note.id} className="p-3 rounded-lg bg-muted/50">
+                      <Badge variant="outline" className="text-xs mb-1">
+                        {NOTE_TYPE_LABELS[note.note_type] || note.note_type}
+                      </Badge>
+                      <p className="font-medium">{note.title}</p>
+                      {note.content && <p className="text-sm text-muted-foreground">{note.content}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(parseISO(note.created_at), "dd/MM/yyyy", { locale: ptBR })} - Dr(a). {note.vet_profile.name}
+                      </p>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           )}
