@@ -27,7 +27,7 @@ export const WelcomeScreen = () => {
             size="lg" 
             variant="hero"
             className="w-full h-14 text-lg font-semibold rounded-2xl shadow-lg"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/?tab=login")}
           >
             Entrar
           </Button>
@@ -48,7 +48,7 @@ export const WelcomeScreen = () => {
 
         {/* Vet Link */}
         <button
-          onClick={() => navigate("/login?mode=vet")}
+          onClick={() => navigate("/?mode=vet")}
           className="text-sm text-primary font-medium hover:underline transition-colors"
         >
           Sou Veterinário →

@@ -47,7 +47,7 @@ export const Hero = () => {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="xl">
-                <Link to="/login">
+                <Link to="/">
                   Já tenho conta
                 </Link>
               </Button>

@@ -122,8 +122,7 @@ const App = () => {
                     <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* Public routes */}
-                      <Route path="/" element={<Index />} />
-                      <Route path="/login" element={<Login />} />
+                      <Route path="/" element={<Login />} />
                       <Route path="/cadastro" element={<Cadastro />} />
                       <Route path="/cadastro-vet" element={<CadastroVet />} />
                       <Route path="/termos" element={<Terms />} />
