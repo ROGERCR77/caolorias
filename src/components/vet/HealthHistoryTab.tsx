@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Scale, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Zap, Activity, Heart } from "lucide-react";
-import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Scale, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Zap, Activity, Heart, Filter } from "lucide-react";
+import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -89,8 +90,16 @@ const SEVERITY_CONFIG: Record<string, { label: string; color: string }> = {
   grave: { label: "Grave", color: "bg-red-100 text-red-700" },
 };
 
+const PERIOD_OPTIONS = [
+  { value: "7", label: "Últimos 7 dias" },
+  { value: "14", label: "Últimos 14 dias" },
+  { value: "30", label: "Últimos 30 dias" },
+  { value: "90", label: "Últimos 90 dias" },
+];
+
 export const HealthHistoryTab = ({ dogId }: HealthHistoryTabProps) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [period, setPeriod] = useState("14");
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [poopLogs, setPoopLogs] = useState<PoopLog[]>([]);
   const [energyLogs, setEnergyLogs] = useState<EnergyLog[]>([]);
@@ -101,37 +110,40 @@ export const HealthHistoryTab = ({ dogId }: HealthHistoryTabProps) => {
     const fetchHealthData = async () => {
       setIsLoading(true);
       try {
+        const daysAgo = parseInt(period);
+        const startDate = format(subDays(new Date(), daysAgo), "yyyy-MM-dd");
+
         const [weightRes, poopRes, energyRes, activityRes, symptomsRes] = await Promise.all([
           supabase
             .from("weight_logs")
             .select("id, weight_kg, date")
             .eq("dog_id", dogId)
-            .order("date", { ascending: false })
-            .limit(30),
+            .gte("date", startDate)
+            .order("date", { ascending: false }),
           supabase
             .from("poop_logs")
             .select("id, texture, color, has_mucus, has_blood, notes, logged_at")
             .eq("dog_id", dogId)
-            .order("logged_at", { ascending: false })
-            .limit(14),
+            .gte("logged_at", startDate)
+            .order("logged_at", { ascending: false }),
           supabase
             .from("energy_logs")
             .select("id, energy_level, notes, logged_at")
             .eq("dog_id", dogId)
-            .order("logged_at", { ascending: false })
-            .limit(14),
+            .gte("logged_at", startDate)
+            .order("logged_at", { ascending: false }),
           supabase
             .from("activity_logs")
             .select("id, type, duration_minutes, intensity, notes, logged_at")
             .eq("dog_id", dogId)
-            .order("logged_at", { ascending: false })
-            .limit(14),
+            .gte("logged_at", startDate)
+            .order("logged_at", { ascending: false }),
           supabase
             .from("health_symptoms")
             .select("id, symptoms, severity, notes, logged_at")
             .eq("dog_id", dogId)
-            .order("logged_at", { ascending: false })
-            .limit(30),
+            .gte("logged_at", startDate)
+            .order("logged_at", { ascending: false }),
         ]);
 
         setWeightLogs((weightRes.data as WeightLog[]) || []);
@@ -149,7 +161,7 @@ export const HealthHistoryTab = ({ dogId }: HealthHistoryTabProps) => {
     if (dogId) {
       fetchHealthData();
     }
-  }, [dogId]);
+  }, [dogId, period]);
 
   if (isLoading) {
     return (
@@ -192,6 +204,26 @@ export const HealthHistoryTab = ({ dogId }: HealthHistoryTabProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Period Filter */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Período:</span>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
       {/* Weight Section */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-4">

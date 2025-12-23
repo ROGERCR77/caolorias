@@ -1255,6 +1255,7 @@ export type Database = {
           created_at: string
           id: string
           note_type: string
+          photo_url: string | null
           scheduled_date: string | null
           title: string
           vet_dog_link_id: string
@@ -1265,6 +1266,7 @@ export type Database = {
           created_at?: string
           id?: string
           note_type: string
+          photo_url?: string | null
           scheduled_date?: string | null
           title: string
           vet_dog_link_id: string
@@ -1275,6 +1277,7 @@ export type Database = {
           created_at?: string
           id?: string
           note_type?: string
+          photo_url?: string | null
           scheduled_date?: string | null
           title?: string
           vet_dog_link_id?: string
