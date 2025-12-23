@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateConsecutiveDays } from "@/lib/insights";
 import { 
-  Plus, Scale, UtensilsCrossed, Dog, TrendingUp, Loader2, 
+  Plus, Scale, UtensilsCrossed, Dog, TrendingUp, 
   Target, Info, ChevronRight, Baby
 } from "lucide-react";
 import { format, isToday, parseISO, subDays } from "date-fns";
@@ -22,7 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { calculateAgeInMonths, getSuggestedMealsPerDay } from "@/contexts/DataContext";
 
 const Dashboard = () => {
-  const { dogs, meals, weightLogs, foods, selectedDogId, isLoading } = useData();
+  const { dogs, meals, weightLogs, selectedDogId, isLoading } = useData();
   const { user } = useAuth();
   const [longestStreak, setLongestStreak] = useState(0);
 
@@ -89,6 +89,7 @@ const Dashboard = () => {
     };
     loadStreak();
   }, [user]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -107,7 +108,6 @@ const Dashboard = () => {
       <AppLayout>
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
           <div className="max-w-sm w-full text-center space-y-8">
-            {/* App Icon - Like reference */}
             <div className="w-28 h-28 mx-auto rounded-[28px] bg-gradient-hero flex items-center justify-center shadow-xl animate-float">
               <Dog className="w-14 h-14 text-primary-foreground" strokeWidth={1.5} />
             </div>
@@ -163,7 +163,7 @@ const Dashboard = () => {
         )}
 
         {selectedDog && (
-            <div className="section-content">
+          <div className="section-content">
             {/* Quick Stats Row */}
             <div className="card-grid-2">
               <Card variant="interactive" className="press-effect">
