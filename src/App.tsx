@@ -15,7 +15,6 @@ import { Loader2 } from "lucide-react";
 import { ProtectedVetRoute } from "@/components/ProtectedVetRoute";
 
 // Lazy load pages for better performance
-const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Cadastro = lazy(() => import("./pages/Cadastro"));
 const CadastroVet = lazy(() => import("./pages/CadastroVet"));
