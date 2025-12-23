@@ -5,6 +5,7 @@ import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -217,11 +218,11 @@ export default function VetReport() {
         },
       };
 
-      await supabase.from("tutor_health_reports").insert({
-        dog_id: selectedDogId,
+      await supabase.from("tutor_health_reports").insert([{
+        dog_id: selectedDogId!,
         tutor_user_id: user.id,
-        report_data: reportData,
-      });
+        report_data: reportData as unknown as Json,
+      }]);
       
       toast.success("Relatório gerado e compartilhado com seu veterinário!");
     } catch (error) {
