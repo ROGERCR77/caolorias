@@ -21,7 +21,7 @@ export const Navbar = () => {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-4">
             <Button asChild variant="ghost">
-              <Link to="/login">Entrar</Link>
+              <Link to="/">Entrar</Link>
             </Button>
             <Button asChild variant="default">
               <Link to="/cadastro">Criar conta</Link>
@@ -43,7 +43,7 @@ export const Navbar = () => {
           <div className="md:hidden py-4 border-t animate-slide-down">
             <nav className="flex flex-col gap-2">
               <Button asChild variant="ghost" className="w-full justify-start">
-                <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+                <Link to="/" onClick={() => setIsOpen(false)}>Entrar</Link>
               </Button>
               <Button asChild variant="default" className="w-full">
                 <Link to="/cadastro" onClick={() => setIsOpen(false)}>Criar conta</Link>

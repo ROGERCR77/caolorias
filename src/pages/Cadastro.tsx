@@ -205,7 +205,7 @@ const Cadastro = () => {
           <div className="text-center animate-fade-in">
             <p className="text-muted-foreground">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-primary font-bold hover:underline">
+              <Link to="/" className="text-primary font-bold hover:underline">
                 Entrar
               </Link>
             </p>

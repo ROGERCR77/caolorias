@@ -331,7 +331,7 @@ const CadastroVet = () => {
           <div className="text-center animate-fade-in">
             <p className="text-muted-foreground">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-blue-500 font-bold hover:underline">
+              <Link to="/?mode=vet" className="text-blue-500 font-bold hover:underline">
                 Entrar
               </Link>
             </p>

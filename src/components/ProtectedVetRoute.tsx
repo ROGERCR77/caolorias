@@ -20,7 +20,7 @@ export function ProtectedVetRoute({ children }: ProtectedVetRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/?mode=vet" replace />;
   }
 
   if (!isVet) {
