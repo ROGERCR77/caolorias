@@ -12,10 +12,13 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
 
+import { ProtectedVetRoute } from "@/components/ProtectedVetRoute";
+
 // Lazy load pages for better performance
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Cadastro = lazy(() => import("./pages/Cadastro"));
+const CadastroVet = lazy(() => import("./pages/CadastroVet"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Advertising = lazy(() => import("./pages/Advertising"));
@@ -42,6 +45,10 @@ const References = lazy(() => import("./pages/app/References"));
 const Achievements = lazy(() => import("./pages/app/Achievements"));
 const ShoppingList = lazy(() => import("./pages/app/ShoppingList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Vet pages
+const VetDashboard = lazy(() => import("./pages/vet/VetDashboard"));
+const VetDogProfile = lazy(() => import("./pages/vet/VetDogProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,9 +125,14 @@ const App = () => {
                       <Route path="/" element={<Index />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/cadastro" element={<Cadastro />} />
+                      <Route path="/cadastro-vet" element={<CadastroVet />} />
                       <Route path="/termos" element={<Terms />} />
                       <Route path="/privacidade" element={<Privacy />} />
                       <Route path="/publicidade" element={<Advertising />} />
+
+                      {/* Vet routes */}
+                      <Route path="/vet/dashboard" element={<ProtectedVetRoute><VetDashboard /></ProtectedVetRoute>} />
+                      <Route path="/vet/dog/:dogId" element={<ProtectedVetRoute><VetDogProfile /></ProtectedVetRoute>} />
 
                       {/* Protected app routes */}
                       <Route path="/app/hoje" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
