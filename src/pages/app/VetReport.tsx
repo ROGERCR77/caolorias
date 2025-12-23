@@ -182,8 +182,48 @@ export default function VetReport() {
         activityLogs: activityRes.data || [],
         intolerances: intolerancesRes.data || [],
       });
+
+      // Salvar relatório no banco para o veterinário acessar
+      const reportData = {
+        dogInfo: {
+          name: selectedDog?.name,
+          breed: selectedDog?.breed,
+          birth_date: selectedDog?.birth_date,
+          current_weight_kg: selectedDog?.current_weight_kg,
+          size: selectedDog?.size,
+          feeding_type: selectedDog?.feeding_type,
+          meta_kcal_dia: selectedDog?.meta_kcal_dia,
+          meta_gramas_dia: selectedDog?.meta_gramas_dia,
+          objetivo: selectedDog?.objetivo,
+        },
+        weightHistory: weightLogs
+          .filter(w => w.dog_id === selectedDogId)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 10),
+        mealsSummary: {
+          count: meals.filter(m => m.dog_id === selectedDogId).length,
+          avgKcal: meals.filter(m => m.dog_id === selectedDogId).length > 0 
+            ? Math.round(meals.filter(m => m.dog_id === selectedDogId)
+                .reduce((sum, m) => sum + (m.total_kcal_estimated || 0), 0) / 
+                meals.filter(m => m.dog_id === selectedDogId).length)
+            : 0,
+        },
+        healthData: {
+          symptoms: symptomsRes.data || [],
+          poopLogs: poopRes.data || [],
+          energyLogs: energyRes.data || [],
+          activityLogs: activityRes.data || [],
+          intolerances: intolerancesRes.data || [],
+        },
+      };
+
+      await supabase.from("tutor_health_reports").insert({
+        dog_id: selectedDogId,
+        tutor_user_id: user.id,
+        report_data: reportData,
+      });
       
-      toast.success("Relatório gerado com sucesso!");
+      toast.success("Relatório gerado e compartilhado com seu veterinário!");
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {

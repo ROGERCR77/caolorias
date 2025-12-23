@@ -1034,6 +1034,41 @@ export type Database = {
           },
         ]
       }
+      tutor_health_reports: {
+        Row: {
+          created_at: string
+          dog_id: string
+          generated_at: string
+          id: string
+          report_data: Json
+          tutor_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dog_id: string
+          generated_at?: string
+          id?: string
+          report_data: Json
+          tutor_user_id: string
+        }
+        Update: {
+          created_at?: string
+          dog_id?: string
+          generated_at?: string
+          id?: string
+          report_data?: Json
+          tutor_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_health_reports_dog_id_fkey"
+            columns: ["dog_id"]
+            isOneToOne: false
+            referencedRelation: "dogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string

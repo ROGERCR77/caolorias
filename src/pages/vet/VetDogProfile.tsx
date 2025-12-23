@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Dog, Plus, Syringe, FileText, 
-  Microscope, MessageSquare, Calendar, Loader2, Stethoscope
+  Microscope, MessageSquare, Calendar, Loader2, Stethoscope,
+  ChartBar, Scale, Utensils, Activity
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -40,6 +41,29 @@ interface VetNote {
   created_at: string;
 }
 
+interface TutorReport {
+  id: string;
+  generated_at: string;
+  report_data: {
+    dogInfo: {
+      name: string;
+      breed: string | null;
+      current_weight_kg: number | null;
+      meta_kcal_dia: number | null;
+      objetivo: string | null;
+    };
+    weightHistory: { date: string; weight_kg: number }[];
+    mealsSummary: { count: number; avgKcal: number };
+    healthData: {
+      symptoms: any[];
+      poopLogs: any[];
+      energyLogs: any[];
+      activityLogs: any[];
+      intolerances: any[];
+    };
+  };
+}
+
 interface VetDogLink {
   id: string;
   tutor: {
@@ -62,9 +86,11 @@ const VetDogProfile = () => {
   const [dog, setDog] = useState<DogInfo | null>(null);
   const [link, setLink] = useState<VetDogLink | null>(null);
   const [notes, setNotes] = useState<VetNote[]>([]);
+  const [tutorReports, setTutorReports] = useState<TutorReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
 
   // New note form
   const [newNoteType, setNewNoteType] = useState<NoteType>("consulta");
@@ -116,6 +142,18 @@ const VetDogProfile = () => {
 
         if (notesError) throw notesError;
         setNotes((notesData || []) as VetNote[]);
+
+        // Fetch tutor reports
+        const { data: reportsData } = await supabase
+          .from("tutor_health_reports")
+          .select("id, generated_at, report_data")
+          .eq("dog_id", dogId)
+          .order("generated_at", { ascending: false })
+          .limit(10);
+
+        if (reportsData) {
+          setTutorReports(reportsData as unknown as TutorReport[]);
+        }
       } catch (error) {
         console.error("Error fetching dog data:", error);
         toast({
@@ -351,8 +389,11 @@ const VetDogProfile = () => {
 
         {/* Notes Tabs */}
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full grid grid-cols-5">
+          <TabsList className="w-full grid grid-cols-6">
             <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="relatorios">
+              <ChartBar className="w-4 h-4" />
+            </TabsTrigger>
             <TabsTrigger value="consulta">
               <Stethoscope className="w-4 h-4" />
             </TabsTrigger>
@@ -375,6 +416,120 @@ const VetDogProfile = () => {
               </Card>
             ) : (
               notes.map((note) => <NoteCard key={note.id} note={note} />)
+            )}
+          </TabsContent>
+
+          {/* Aba de Relatórios do Tutor */}
+          <TabsContent value="relatorios" className="mt-4 space-y-3">
+            {tutorReports.length === 0 ? (
+              <Card className="p-8 text-center">
+                <ChartBar className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">O tutor ainda não gerou relatórios.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Os relatórios aparecem quando o tutor gera no app.
+                </p>
+              </Card>
+            ) : (
+              tutorReports.map((report) => (
+                <Card 
+                  key={report.id} 
+                  className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setExpandedReport(expandedReport === report.id ? null : report.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                      <ChartBar className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">Relatório de Saúde</p>
+                        <Badge variant="secondary" className="text-xs">
+                          {format(new Date(report.generated_at), "dd/MM/yy", { locale: ptBR })}
+                        </Badge>
+                      </div>
+                      
+                      {/* Summary */}
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Scale className="w-3 h-3" />
+                          {report.report_data?.dogInfo?.current_weight_kg || "-"} kg
+                        </span>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Utensils className="w-3 h-3" />
+                          ~{report.report_data?.mealsSummary?.avgKcal || 0} kcal/dia
+                        </span>
+                        {report.report_data?.healthData?.activityLogs?.length > 0 && (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Activity className="w-3 h-3" />
+                            {report.report_data.healthData.activityLogs.length} atividades
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Expanded Details */}
+                      {expandedReport === report.id && (
+                        <div className="mt-4 pt-4 border-t space-y-3">
+                          {/* Weight History */}
+                          {report.report_data?.weightHistory?.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium mb-1">Histórico de Peso</p>
+                              <div className="space-y-1">
+                                {report.report_data.weightHistory.slice(0, 5).map((w, i) => (
+                                  <p key={i} className="text-xs text-muted-foreground">
+                                    {format(new Date(w.date), "dd/MM")} - {w.weight_kg} kg
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Health Summary */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="p-2 rounded bg-muted">
+                              <p className="font-medium">Fezes</p>
+                              <p className="text-muted-foreground">
+                                {report.report_data?.healthData?.poopLogs?.length || 0} registros
+                              </p>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <p className="font-medium">Energia</p>
+                              <p className="text-muted-foreground">
+                                {report.report_data?.healthData?.energyLogs?.length || 0} registros
+                              </p>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <p className="font-medium">Sintomas</p>
+                              <p className="text-muted-foreground">
+                                {report.report_data?.healthData?.symptoms?.length || 0} ocorrências
+                              </p>
+                            </div>
+                            <div className="p-2 rounded bg-muted">
+                              <p className="font-medium">Intolerâncias</p>
+                              <p className="text-muted-foreground">
+                                {report.report_data?.healthData?.intolerances?.length || 0} registradas
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Intolerances List */}
+                          {report.report_data?.healthData?.intolerances?.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium mb-1 text-red-600">⚠️ Alergias/Intolerâncias</p>
+                              <div className="space-y-1">
+                                {report.report_data.healthData.intolerances.map((i: any, idx: number) => (
+                                  <p key={idx} className="text-xs text-muted-foreground">
+                                    • {i.food_name || "Alimento"} ({i.reaction_type})
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))
             )}
           </TabsContent>
 
