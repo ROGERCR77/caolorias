@@ -40,6 +40,24 @@ export function useUserRole() {
   );
   const [isLoading, setIsLoading] = useState(true);
 
+  // Clear all role caches on sign out
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        // Clear all role caches
+        try {
+          const keys = Object.keys(localStorage).filter(k => k.startsWith(ROLE_CACHE_KEY));
+          keys.forEach(k => localStorage.removeItem(k));
+        } catch {
+          // Ignore localStorage errors
+        }
+        setRole(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     const fetchRole = async () => {
       if (!user) {

@@ -14,6 +14,3 @@ verify_jwt = false
 
 [functions.process-reminders]
 verify_jwt = false
-
-[functions.transcribe-vet-note]
-verify_jwt = false

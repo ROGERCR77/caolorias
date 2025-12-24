@@ -287,11 +287,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       // Fetch user data in parallel
       const [dogsRes, foodsRes, mealsRes, weightRes, plansRes] = await Promise.all([
-        supabase.from("dogs").select("*").order("created_at", { ascending: true }),
-        supabase.from("foods").select("*").order("name", { ascending: true }),
-        supabase.from("meals").select("*, meal_items(*)").order("date_time", { ascending: false }),
-        supabase.from("weight_logs").select("*").order("date", { ascending: true }),
-        supabase.from("meal_plans").select("*, meal_plan_items(*)").order("created_at", { ascending: false }),
+        supabase.from("dogs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase.from("foods").select("*").eq("user_id", user.id).order("name", { ascending: true }),
+        supabase.from("meals").select("*, meal_items(*)").eq("user_id", user.id).order("date_time", { ascending: false }),
+        supabase.from("weight_logs").select("*").eq("user_id", user.id).order("date", { ascending: true }),
+        supabase.from("meal_plans").select("*, meal_plan_items(*)").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
 
       // Fetch reference data only if not cached
