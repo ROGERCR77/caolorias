@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -17,6 +17,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isVet, isLoading: roleLoading } = useUserRole();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const checkedOnboardingRef = useRef(false);
 
   // Check localStorage first for immediate response
   const getLocalOnboardingSeen = (userId: string): boolean => {
@@ -39,10 +40,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     async function checkOnboardingStatus() {
-      if (!user) {
-        setCheckingOnboarding(false);
+      if (!user || checkedOnboardingRef.current) {
+        if (!user) setCheckingOnboarding(false);
         return;
       }
+
+      checkedOnboardingRef.current = true;
 
       // First check localStorage for instant feedback
       if (getLocalOnboardingSeen(user.id)) {
@@ -62,6 +65,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           console.error("Error checking onboarding status:", error);
           // If there's an error, assume they've seen it to not block the app
           setHasSeenOnboarding(true);
+          setLocalOnboardingSeen(user.id);
         } else if (profile) {
           const seen = profile.has_seen_onboarding ?? false;
           setHasSeenOnboarding(seen);
@@ -70,12 +74,32 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             setLocalOnboardingSeen(user.id);
           }
         } else {
-          // No profile yet, show onboarding
-          setHasSeenOnboarding(false);
+          // No profile yet - check if user has any dogs (existing user)
+          const { data: dogs } = await supabase
+            .from("dogs")
+            .select("id")
+            .eq("user_id", user.id)
+            .limit(1);
+
+          if (dogs && dogs.length > 0) {
+            // Existing user with dogs - skip onboarding
+            setHasSeenOnboarding(true);
+            setLocalOnboardingSeen(user.id);
+            // Create profile with onboarding marked as seen
+            await supabase.from("profiles").upsert({
+              user_id: user.id,
+              name: user.email?.split("@")[0] || "Usuário",
+              has_seen_onboarding: true,
+            }, { onConflict: "user_id" });
+          } else {
+            // New user, show onboarding
+            setHasSeenOnboarding(false);
+          }
         }
       } catch (err) {
         console.error("Error in onboarding check:", err);
         setHasSeenOnboarding(true);
+        setLocalOnboardingSeen(user.id);
       } finally {
         setCheckingOnboarding(false);
       }
@@ -84,6 +108,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (!isLoading && user) {
       checkOnboardingStatus();
     } else if (!isLoading && !user) {
+      checkedOnboardingRef.current = false;
       setCheckingOnboarding(false);
     }
   }, [user, isLoading]);

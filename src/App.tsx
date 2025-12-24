@@ -69,18 +69,15 @@ const PageLoader = () => (
 
 const App = () => {
   useEffect(() => {
+    // Only run OneSignal init on native platforms
     const init = () => {
       if (didInit) return;
 
       // @ts-ignore
       const os = (window as any)?.plugins?.OneSignal;
 
-      console.log("OneSignal object:", os);
-
-      if (!os) {
-        console.log("OneSignal not ready yet");
-        return;
-      }
+      // Don't log on web to avoid spam
+      if (!os) return;
 
       didInit = true;
       console.log("Initializing OneSignal (once)");
@@ -98,11 +95,16 @@ const App = () => {
       }
     };
 
+    // Listen for deviceready (Cordova/Capacitor)
     document.addEventListener("deviceready", init, { once: true });
-    const t = setInterval(init, 500);
+    
+    // Fallback: try once after short delay (for native apps)
+    const timeout = setTimeout(() => {
+      if (!didInit) init();
+    }, 1000);
 
     return () => {
-      clearInterval(t);
+      clearTimeout(timeout);
       document.removeEventListener("deviceready", init);
     };
   }, []);

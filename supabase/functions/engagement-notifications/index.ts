@@ -30,14 +30,14 @@ async function checkMealNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   
-  for (const { user_id, dog_name } of userDogs) {
+  for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastMeal } = await supabase
       .from('meals')
       .select('date_time')
-      .eq('user_id', user_id)
+      .eq('dog_id', dog_id)
       .order('date_time', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (lastMeal) {
       const daysSinceMeal = Math.floor((today.getTime() - new Date(lastMeal.date_time).getTime()) / (1000 * 60 * 60 * 24));
@@ -70,14 +70,14 @@ async function checkWeightNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   
-  for (const { user_id, dog_name } of userDogs) {
+  for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastWeight } = await supabase
       .from('weight_logs')
       .select('date')
-      .eq('user_id', user_id)
+      .eq('dog_id', dog_id)
       .order('date', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (lastWeight) {
       const daysSinceWeight = Math.floor((today.getTime() - new Date(lastWeight.date).getTime()) / (1000 * 60 * 60 * 24));
@@ -296,14 +296,14 @@ async function checkActivityNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   
-  for (const { user_id, dog_name } of userDogs) {
+  for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastActivity } = await supabase
       .from('activity_logs')
       .select('logged_at')
-      .eq('user_id', user_id)
+      .eq('dog_id', dog_id)
       .order('logged_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (lastActivity) {
       const daysSinceActivity = Math.floor((today.getTime() - new Date(lastActivity.logged_at).getTime()) / (1000 * 60 * 60 * 24));
@@ -335,7 +335,7 @@ async function checkDietaryTransitionNotifications(
       .select('id, current_day, total_days, status, started_at')
       .eq('dog_id', dog_id)
       .eq('status', 'em_andamento')
-      .single();
+      .maybeSingle();
 
     if (activeTransition) {
       // Check if user logged today
@@ -345,7 +345,7 @@ async function checkDietaryTransitionNotifications(
         .select('id')
         .eq('transition_id', activeTransition.id)
         .eq('logged_at', todayStr)
-        .single();
+        .maybeSingle();
 
       if (!todayLog) {
         const naturalPercent = Math.min(100, Math.round((activeTransition.current_day / activeTransition.total_days) * 100));
@@ -404,7 +404,7 @@ async function checkStreakNotifications(
       .from('user_streaks')
       .select('current_streak, last_activity_date')
       .eq('user_id', user_id)
-      .single();
+      .maybeSingle();
 
     if (streak && streak.current_streak >= 3 && streak.last_activity_date) {
       const lastActivity = new Date(streak.last_activity_date);
@@ -486,7 +486,7 @@ async function checkCalorieNotifications(
       .from('dogs')
       .select('meta_kcal_dia')
       .eq('id', dog_id)
-      .single();
+      .maybeSingle();
 
     if (!dog?.meta_kcal_dia) continue;
 
@@ -556,7 +556,21 @@ serve(async (req) => {
 
     console.log('🔔 Starting comprehensive engagement notifications check...');
 
-    // Get all users with their dogs
+    // Get all users with role 'tutor' (exclude vets from engagement notifications)
+    const { data: tutorRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'tutor');
+
+    if (rolesError) {
+      console.error('Error fetching tutor roles:', rolesError);
+      throw rolesError;
+    }
+
+    const tutorUserIds = new Set((tutorRoles || []).map(r => r.user_id));
+    console.log(`📊 Found ${tutorUserIds.size} tutors`);
+
+    // Get all dogs from tutors only
     const { data: dogs, error: dogsError } = await supabase
       .from('dogs')
       .select('id, user_id, name, birth_date, is_puppy')
@@ -564,11 +578,14 @@ serve(async (req) => {
 
     if (dogsError) throw dogsError;
 
+    // Filter to only include dogs from tutor users
+    const tutorDogs = dogs?.filter(dog => tutorUserIds.has(dog.user_id)) || [];
+
     // Create unique user-dog pairs (first dog per user for some notifications)
     const userDogs: UserDogData[] = [];
     const seenUsers = new Set<string>();
     
-    dogs?.forEach(dog => {
+    tutorDogs.forEach(dog => {
       if (!seenUsers.has(dog.user_id)) {
         userDogs.push({
           user_id: dog.user_id,
@@ -581,7 +598,7 @@ serve(async (req) => {
       }
     });
 
-    console.log(`📊 Checking ${userDogs.length} users...`);
+    console.log(`📊 Checking ${userDogs.length} tutor users...`);
 
     // Run all notification checks in parallel
     const [
@@ -696,6 +713,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
+        tutors_found: tutorUserIds.size,
         users_checked: userDogs.length,
         notifications_found: notificationsToSend.length,
         notifications_sent: sentCount,
