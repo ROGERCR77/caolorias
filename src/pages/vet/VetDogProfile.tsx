@@ -17,7 +17,7 @@ import {
   ChartBar, Scale, Utensils, Activity, Heart, Camera, X, Image as ImageIcon
 } from "lucide-react";
 import { HealthHistoryTab } from "@/components/vet/HealthHistoryTab";
-import { VoiceRecorder } from "@/components/vet/VoiceRecorder";
+
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -463,27 +463,6 @@ const VetDogProfile = () => {
               <DialogTitle>Novo registro</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              {/* Voice Recorder */}
-              <VoiceRecorder
-                onTranscriptionComplete={(result) => {
-                  setNewNoteType(result.tipo_sugerido);
-                  setNewNoteTitle(result.titulo);
-                  setNewNoteContent(result.descricao);
-                  if (result.data_retorno) {
-                    setNewNoteScheduledDate(result.data_retorno);
-                  }
-                }}
-                disabled={isAddingNote}
-              />
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">ou preencha manualmente</span>
-                </div>
-              </div>
 
               <div className="space-y-2">
                 <Label>Tipo</Label>
