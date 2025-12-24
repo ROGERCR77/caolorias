@@ -4,9 +4,40 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export type AppRole = "tutor" | "vet" | null;
 
+const ROLE_CACHE_KEY = "caolorias_user_role";
+
+// Get cached role from localStorage
+const getCachedRole = (userId: string): AppRole => {
+  try {
+    const cached = localStorage.getItem(`${ROLE_CACHE_KEY}_${userId}`);
+    if (cached === "vet" || cached === "tutor") {
+      return cached;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// Save role to localStorage
+const setCachedRole = (userId: string, role: AppRole) => {
+  try {
+    if (role) {
+      localStorage.setItem(`${ROLE_CACHE_KEY}_${userId}`, role);
+    } else {
+      localStorage.removeItem(`${ROLE_CACHE_KEY}_${userId}`);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
 export function useUserRole() {
   const { user } = useAuth();
-  const [role, setRole] = useState<AppRole>(null);
+  // Initialize with cached role for instant response
+  const [role, setRole] = useState<AppRole>(() => 
+    user ? getCachedRole(user.id) : null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -15,6 +46,12 @@ export function useUserRole() {
         setRole(null);
         setIsLoading(false);
         return;
+      }
+
+      // Use cached role immediately if available
+      const cachedRole = getCachedRole(user.id);
+      if (cachedRole) {
+        setRole(cachedRole);
       }
 
       try {
@@ -26,16 +63,26 @@ export function useUserRole() {
 
         if (error) {
           console.error("Error fetching role:", error);
-          setRole(null);
+          // Keep cached role if fetch fails
+          if (!cachedRole) {
+            setRole("tutor");
+            setCachedRole(user.id, "tutor");
+          }
         } else if (data) {
-          setRole(data.role as AppRole);
+          const fetchedRole = data.role as AppRole;
+          setRole(fetchedRole);
+          setCachedRole(user.id, fetchedRole);
         } else {
           // No role found, default to tutor (for existing users)
           setRole("tutor");
+          setCachedRole(user.id, "tutor");
         }
       } catch (err) {
         console.error("Error in useUserRole:", err);
-        setRole(null);
+        // Keep cached role on error
+        if (!cachedRole) {
+          setRole("tutor");
+        }
       } finally {
         setIsLoading(false);
       }

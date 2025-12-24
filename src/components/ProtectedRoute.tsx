@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { OnboardingScreen } from "@/components/app/OnboardingScreen";
@@ -13,6 +14,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
+  const { isVet, isLoading: roleLoading } = useUserRole();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
@@ -118,7 +120,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   };
 
-  if (isLoading || checkingOnboarding) {
+  if (isLoading || checkingOnboarding || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -131,6 +133,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/" replace />;
+  }
+
+  // If user is a vet, redirect to vet dashboard
+  if (isVet) {
+    return <Navigate to="/vet/dashboard" replace />;
   }
 
   // Show onboarding if user hasn't seen it yet

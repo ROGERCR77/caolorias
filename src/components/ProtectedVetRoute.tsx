@@ -9,8 +9,9 @@ interface ProtectedVetRouteProps {
 
 export function ProtectedVetRoute({ children }: ProtectedVetRouteProps) {
   const { user, isLoading: authLoading } = useAuth();
-  const { role, isLoading: roleLoading, isVet } = useUserRole();
+  const { isLoading: roleLoading, isVet } = useUserRole();
 
+  // Wait for both auth and role to be loaded before making any decisions
   if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -23,8 +24,8 @@ export function ProtectedVetRoute({ children }: ProtectedVetRouteProps) {
     return <Navigate to="/?mode=vet" replace />;
   }
 
+  // Only redirect to tutor app after confirming user is NOT a vet
   if (!isVet) {
-    // User is not a vet, redirect to tutor app
     return <Navigate to="/app/hoje" replace />;
   }
 
