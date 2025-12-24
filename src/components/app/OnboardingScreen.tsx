@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import { 
@@ -38,19 +38,19 @@ const slides: OnboardingSlide[] = [
     icon: <Scale className="w-16 h-16" />,
     title: "Acompanhe o Peso",
     description: "Gráficos de evolução do peso com alertas inteligentes para manter seu cão no peso ideal.",
-    color: "from-info to-info/80"
+    color: "from-blue-500 to-blue-400"
   },
   {
     icon: <Heart className="w-16 h-16" />,
     title: "Monitore a Saúde Digestiva",
     description: "Registre fezes, energia e sintomas. Identifique padrões e intolerâncias alimentares.",
-    color: "from-destructive to-destructive/80"
+    color: "from-rose-500 to-rose-400"
   },
   {
     icon: <Syringe className="w-16 h-16" />,
     title: "Carteira de Saúde",
     description: "Vacinas e vermífugos organizados com lembretes automáticos. Nunca perca uma data importante!",
-    color: "from-success to-success/80"
+    color: "from-emerald-500 to-emerald-400"
   },
   {
     icon: <Stethoscope className="w-16 h-16" />,
@@ -62,7 +62,7 @@ const slides: OnboardingSlide[] = [
     icon: <Trophy className="w-16 h-16" />,
     title: "Conquistas & Streaks",
     description: "Gamificação para manter a consistência. Desbloqueie conquistas cuidando do seu pet!",
-    color: "from-warning to-warning/80"
+    color: "from-amber-500 to-amber-400"
   }
 ];
 
@@ -87,17 +87,16 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     setCurrentIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
-  useState(() => {
-    if (emblaApi) {
-      emblaApi.on("select", onSelect);
-      onSelect();
-    }
-  });
-
-  // Update current index when emblaApi changes
-  if (emblaApi && !emblaApi.internalEngine().eventHandler) {
+  useEffect(() => {
+    if (!emblaApi) return;
+    
     emblaApi.on("select", onSelect);
-  }
+    onSelect();
+    
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, onSelect]);
 
   const isLastSlide = currentIndex === slides.length - 1;
 
@@ -126,6 +125,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               <AnimatePresence mode="wait">
                 {currentIndex === index && (
                   <motion.div
+                    key={`slide-${index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
