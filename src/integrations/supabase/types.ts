@@ -806,6 +806,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          has_seen_onboarding: boolean | null
           id: string
           name: string
           updated_at: string
@@ -813,6 +814,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          has_seen_onboarding?: boolean | null
           id?: string
           name: string
           updated_at?: string
@@ -820,6 +822,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          has_seen_onboarding?: boolean | null
           id?: string
           name?: string
           updated_at?: string
