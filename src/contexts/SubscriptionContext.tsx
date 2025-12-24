@@ -104,30 +104,31 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const platformType = platform === "ios" ? "apple" : "google";
 
       if (platform === "ios") {
-        // @ts-ignore - cordova-plugin-purchase
-        const { store } = CdvPurchase;
+        // NOTE: store.getApplicationReceipt() does NOT exist in cordova-plugin-purchase v13+
+        // We must use the receipt data that comes with the transaction or its parent receipt
         
-        const appReceipt = await store.getApplicationReceipt();
-        
-        if (appReceipt?.sourceReceipt?.raw) {
-          receiptData = appReceipt.sourceReceipt.raw;
-          console.log("IAP: Got iOS receipt from applicationReceipt, length:", receiptData.length);
+        // First try: transaction's parent receipt (v13 approach)
+        if (transaction.parentReceipt?.sourceReceipt?.raw) {
+          receiptData = transaction.parentReceipt.sourceReceipt.raw;
+          console.log("IAP: Got iOS receipt from parentReceipt.sourceReceipt.raw, length:", receiptData.length);
         } else if (transaction.appStoreReceipt) {
+          // Fallback: some versions expose it directly on transaction
           receiptData = transaction.appStoreReceipt;
           console.log("IAP: Got iOS receipt from transaction.appStoreReceipt, length:", receiptData.length);
+        } else if (window.storekit?.appStoreReceipt) {
+          // Fallback: native layer
+          receiptData = window.storekit.appStoreReceipt;
+          console.log("IAP: Got iOS receipt from native layer, length:", receiptData.length);
         } else {
-          console.log("IAP: Attempting to get receipt from native layer...");
-          const nativeReceipt = await new Promise<string>((resolve, reject) => {
-            if (window.storekit?.appStoreReceipt) {
-              resolve(window.storekit.appStoreReceipt);
-            } else {
-              reject(new Error("Receipt não disponível no dispositivo"));
-            }
-          }).catch(() => null);
+          // Last resort: try to get from the store's localReceipts
+          // @ts-ignore - cordova-plugin-purchase
+          const { store } = CdvPurchase;
+          const localReceipts = store.localReceipts || [];
+          const iosReceipt = localReceipts.find((r: any) => r.platform === "ios-appstore");
           
-          if (nativeReceipt) {
-            receiptData = nativeReceipt;
-            console.log("IAP: Got iOS receipt from native layer, length:", receiptData.length);
+          if (iosReceipt?.sourceReceipt?.raw) {
+            receiptData = iosReceipt.sourceReceipt.raw;
+            console.log("IAP: Got iOS receipt from localReceipts, length:", receiptData.length);
           } else {
             throw new Error("Não foi possível obter o receipt da App Store. Tente novamente.");
           }

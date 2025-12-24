@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { OnboardingScreen } from "@/components/app/OnboardingScreen";
 
+const ONBOARDING_STORAGE_KEY = "caolorias_onboarding_seen";
+
 interface ProtectedRouteProps {
   children: ReactNode;
 }
@@ -14,9 +16,35 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
+  // Check localStorage first for immediate response
+  const getLocalOnboardingSeen = (userId: string): boolean => {
+    try {
+      const stored = localStorage.getItem(`${ONBOARDING_STORAGE_KEY}_${userId}`);
+      return stored === "true";
+    } catch {
+      return false;
+    }
+  };
+
+  // Save to localStorage immediately
+  const setLocalOnboardingSeen = (userId: string) => {
+    try {
+      localStorage.setItem(`${ONBOARDING_STORAGE_KEY}_${userId}`, "true");
+    } catch {
+      // Ignore localStorage errors
+    }
+  };
+
   useEffect(() => {
     async function checkOnboardingStatus() {
       if (!user) {
+        setCheckingOnboarding(false);
+        return;
+      }
+
+      // First check localStorage for instant feedback
+      if (getLocalOnboardingSeen(user.id)) {
+        setHasSeenOnboarding(true);
         setCheckingOnboarding(false);
         return;
       }
@@ -33,7 +61,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           // If there's an error, assume they've seen it to not block the app
           setHasSeenOnboarding(true);
         } else if (profile) {
-          setHasSeenOnboarding(profile.has_seen_onboarding ?? false);
+          const seen = profile.has_seen_onboarding ?? false;
+          setHasSeenOnboarding(seen);
+          // Sync localStorage with DB
+          if (seen) {
+            setLocalOnboardingSeen(user.id);
+          }
         } else {
           // No profile yet, show onboarding
           setHasSeenOnboarding(false);
@@ -56,32 +89,33 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const handleOnboardingComplete = async () => {
     if (!user) return;
 
-    try {
-      // Try to update existing profile
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ has_seen_onboarding: true })
-        .eq("user_id", user.id);
+    // Immediately mark as seen in state and localStorage (for instant UX)
+    setHasSeenOnboarding(true);
+    setLocalOnboardingSeen(user.id);
 
-      if (updateError) {
-        // If update fails (no row exists), try to insert
-        const { error: insertError } = await supabase
-          .from("profiles")
-          .insert({
+    try {
+      // Use upsert to avoid update/insert race conditions
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(
+          {
             user_id: user.id,
             name: user.email?.split("@")[0] || "Usuário",
-            has_seen_onboarding: true
-          });
+            has_seen_onboarding: true,
+          },
+          {
+            onConflict: "user_id",
+            ignoreDuplicates: false,
+          }
+        );
 
-        if (insertError) {
-          console.error("Error saving onboarding status:", insertError);
-        }
+      if (error) {
+        console.error("Error saving onboarding status:", error);
+        // Even if backend fails, local storage ensures it won't show again
       }
     } catch (err) {
       console.error("Error completing onboarding:", err);
     }
-
-    setHasSeenOnboarding(true);
   };
 
   if (isLoading || checkingOnboarding) {
