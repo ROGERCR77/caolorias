@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import UserNotifications
+import FirebaseCore
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,6 +9,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Initialize Firebase
+        FirebaseApp.configure()
+        
         // Set notification delegate for foreground notifications
         UNUserNotificationCenter.current().delegate = self
         
