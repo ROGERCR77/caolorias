@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell } from "luci
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FoodSearchCombobox, FoodReferenceWithMacros } from "@/components/app/FoodSearchCombobox";
+import { formatFoodShort } from "@/lib/formatFoodDisplay";
 
 type FilterPeriod = "today" | "week" | "month" | "all";
 
@@ -36,7 +38,7 @@ const Meals = () => {
     dogId: selectedDogId || "",
     dateTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     title: "",
-    items: [] as { foodId: string; grams: number }[],
+    items: [] as { foodId: string; grams: number; foodName?: string; unitType?: string; gramsPerUnit?: number | null }[],
   });
 
   // Open dialog if ?new=true
@@ -71,7 +73,29 @@ const Meals = () => {
   const addItem = () => {
     setFormData((prev) => ({
       ...prev,
-      items: [...prev.items, { foodId: "", grams: 0 }],
+      items: [...prev.items, { foodId: "", grams: 0, foodName: "", unitType: "GRAMA", gramsPerUnit: null }],
+    }));
+  };
+
+  const updateItemFromReference = (index: number, food: FoodReferenceWithMacros | null) => {
+    if (!food) return;
+    
+    // Check if food already exists in user's foods
+    const existingFood = foods.find(f => f.reference_food_id === food.id);
+    
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index ? { 
+          ...item, 
+          foodId: existingFood?.id || food.id, // Use existing or will create on submit
+          foodName: food.name,
+          unitType: food.default_unit,
+          gramsPerUnit: food.unit_gram_equivalence,
+          grams: food.unit_gram_equivalence || 100, // Default to 1 unit or 100g
+          _referenceFood: food, // Store reference for creation
+        } : item
+      ),
     }));
   };
 
@@ -248,8 +272,20 @@ const Meals = () => {
     })
     .sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime());
 
-  const getFoodName = (foodId: string) => {
-    return foods.find((f) => f.id === foodId)?.name || "Alimento";
+  const getFood = (foodId: string) => {
+    return foods.find((f) => f.id === foodId);
+  };
+
+  const getFoodDisplayName = (foodId: string, grams: number) => {
+    const food = getFood(foodId);
+    if (!food) return `Alimento (${grams}g)`;
+    
+    return formatFoodShort({
+      name: food.name,
+      grams,
+      unit_type: food.unit_type,
+      grams_per_unit: food.grams_per_unit,
+    });
   };
 
   const getDogName = (dogId: string) => {
@@ -356,7 +392,7 @@ const Meals = () => {
                       </p>
                       {meal.meal_items && meal.meal_items.length > 0 && (
                         <p className="text-sm text-muted-foreground">
-                          {meal.meal_items.map((item) => `${getFoodName(item.food_id)} (${item.grams}g)`).join(", ")}
+                          {meal.meal_items.map((item) => getFoodDisplayName(item.food_id, item.grams)).join(", ")}
                         </p>
                       )}
                       <div className="mt-2 flex gap-4 text-sm">
@@ -453,51 +489,89 @@ const Meals = () => {
                     Clique em "Adicionar" para incluir alimentos
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {formData.items.map((item, index) => (
-                      <div key={index} className="flex gap-2 items-end p-3 rounded-lg bg-muted/50">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs">Alimento</Label>
-                          <Select
-                            value={item.foodId}
-                            onValueChange={(v) => updateItem(index, "foodId", v)}
+                      <div key={index} className="p-3 rounded-lg bg-muted/50 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs">Alimento</Label>
+                            <FoodSearchCombobox
+                              selectedFood={item.foodName ? {
+                                id: item.foodId,
+                                name: item.foodName,
+                                aliases: [],
+                                category_main: "PROTEINA",
+                                default_unit: item.unitType || "GRAMA",
+                                unit_gram_equivalence: item.gramsPerUnit || null,
+                                cost_level: "MEDIO",
+                                notes_simple: null,
+                                cautions: null,
+                              } : null}
+                              onSelect={(food) => updateItemFromReference(index, food)}
+                              onCreateCustom={() => {
+                                // Fallback to existing foods selection
+                                updateItem(index, "foodId", foods[0]?.id || "");
+                              }}
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-destructive shrink-0 mt-6"
+                            onClick={() => removeItem(index)}
                             disabled={isSubmitting}
                           >
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Selecionar" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-card">
-                              {foods.map((food) => (
-                                <SelectItem key={food.id} value={food.id}>{food.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <div className="w-24 space-y-1">
-                          <Label className="text-xs">Gramas</Label>
-                          <Input
-                            type="number"
-                            className="h-9"
-                            value={item.grams || ""}
-                            onChange={(e) => updateItem(index, "grams", parseInt(e.target.value) || 0)}
-                            placeholder="g"
-                            disabled={isSubmitting}
-                          />
+                        
+                        <div className="flex items-end gap-3">
+                          {item.unitType && item.unitType !== "GRAMA" && item.gramsPerUnit ? (
+                            <>
+                              <div className="flex-1 space-y-1">
+                                <Label className="text-xs">Quantidade</Label>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    step="0.5"
+                                    className="h-9 w-20"
+                                    value={item.gramsPerUnit ? Math.round((item.grams / item.gramsPerUnit) * 10) / 10 || "" : ""}
+                                    onChange={(e) => {
+                                      const units = parseFloat(e.target.value) || 0;
+                                      const grams = Math.round(units * (item.gramsPerUnit || 1));
+                                      updateItem(index, "grams", grams);
+                                    }}
+                                    disabled={isSubmitting}
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    {item.unitType === "UNIDADE" ? "unid." : item.unitType === "COLHER_SOPA" ? "colher" : item.unitType}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-sm text-muted-foreground pb-2">
+                                = {item.grams}g
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex-1 space-y-1">
+                              <Label className="text-xs">Gramas</Label>
+                              <Input
+                                type="number"
+                                className="h-9"
+                                value={item.grams || ""}
+                                onChange={(e) => updateItem(index, "grams", parseInt(e.target.value) || 0)}
+                                placeholder="g"
+                                disabled={isSubmitting}
+                              />
+                            </div>
+                          )}
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-destructive shrink-0"
-                          onClick={() => removeItem(index)}
-                          disabled={isSubmitting}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
                       </div>
                     ))}
                     <p className="text-xs text-muted-foreground">
-                      Use a mesma forma de pesagem do cardápio do veterinário (cru ou cozido). O Cãolorias não converte automaticamente.
+                      Use a mesma forma de pesagem do cardápio do veterinário (cru ou cozido).
                     </p>
                   </div>
                 )}

@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useData, Food } from "@/contexts/DataContext";
-import { Plus, Edit2, Trash2, Apple, Drumstick, Wheat, Carrot, Cookie, Package, Loader2, Info, Heart, Droplets, Pill, Sparkles, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, Apple, Drumstick, Wheat, Carrot, Cookie, Package, Loader2, Info, Heart, Droplets, Pill, Sparkles, Search, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FoodSearchCombobox, FoodReferenceWithMacros } from "@/components/app/FoodSearchCombobox";
+import { FoodDetailsSheet } from "@/components/app/FoodDetailsSheet";
 
 // Expanded category config with new categories
 const categoryConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -62,6 +63,8 @@ const Foods = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<"search" | "custom">("search");
   const [selectedFoodRef, setSelectedFoodRef] = useState<FoodReferenceWithMacros | null>(null);
+  const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
+  const [detailsFoodId, setDetailsFoodId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -597,6 +600,18 @@ const Foods = () => {
                         )}
                       </div>
                       <div className="flex gap-1 shrink-0">
+                        {(food as any).reference_food_id && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => {
+                              setDetailsFoodId((food as any).reference_food_id);
+                              setDetailsSheetOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -620,6 +635,13 @@ const Foods = () => {
             })}
           </div>
         )}
+
+        {/* Food details sheet */}
+        <FoodDetailsSheet
+          foodId={detailsFoodId}
+          open={detailsSheetOpen}
+          onOpenChange={setDetailsSheetOpen}
+        />
       </div>
     </AppLayout>
   );
