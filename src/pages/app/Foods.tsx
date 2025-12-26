@@ -110,12 +110,12 @@ const Foods = () => {
       category: food.category,
       kcal_per_100g: food.kcal_per_100g?.toString() || "",
       notes: food.notes || "",
-      unit_type: (food as any).unit_type || "GRAMA",
-      grams_per_unit: (food as any).grams_per_unit?.toString() || "",
-      protein_g: (food as any).protein_g?.toString() || "",
-      fat_g: (food as any).fat_g?.toString() || "",
-      carb_g: (food as any).carb_g?.toString() || "",
-      cost_level: (food as any).cost_level || "MEDIO",
+      unit_type: food.unit_type || "GRAMA",
+      grams_per_unit: food.grams_per_unit?.toString() || "",
+      protein_g: food.protein_g?.toString() || "",
+      fat_g: food.fat_g?.toString() || "",
+      carb_g: food.carb_g?.toString() || "",
+      cost_level: food.cost_level || "MEDIO",
     });
     setActiveTab("custom");
     setIsDialogOpen(true);
@@ -254,7 +254,7 @@ const Foods = () => {
                   Adicionar
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col">
+              <DialogContent className="sm:max-w-lg bg-card max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-40px)] flex flex-col" aria-describedby={undefined}>
                 <DialogHeader className="flex-shrink-0">
                   <DialogTitle>
                     {editingFood ? "Editar alimento" : "Adicionar alimento"}
@@ -552,12 +552,6 @@ const Foods = () => {
             {filteredFoods.map((food) => {
               const config = categoryConfig[food.category] || categoryConfig.other;
               const Icon = config.icon;
-              const costLevel = (food as any).cost_level;
-              const unitType = (food as any).unit_type;
-              const gramsPerUnit = (food as any).grams_per_unit;
-              const proteinG = (food as any).protein_g;
-              const fatG = (food as any).fat_g;
-              const carbG = (food as any).carb_g;
               
               return (
                 <Card key={food.id} variant="interactive" className="overflow-hidden">
@@ -569,8 +563,8 @@ const Foods = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold">{food.name}</h3>
-                          {costLevel && (
-                            <span className="text-xs">{costLabels[costLevel]?.icon}</span>
+                          {food.cost_level && (
+                            <span className="text-xs">{costLabels[food.cost_level]?.icon}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
@@ -581,18 +575,18 @@ const Foods = () => {
                               <span>{food.kcal_per_100g} kcal/100g</span>
                             </>
                           )}
-                          {unitType && unitType !== "GRAMA" && gramsPerUnit && (
+                          {food.unit_type && food.unit_type !== "GRAMA" && food.grams_per_unit && (
                             <>
                               <span>•</span>
-                              <span>1 {unitLabels[unitType]} ≈ {gramsPerUnit}g</span>
+                              <span>1 {unitLabels[food.unit_type]} ≈ {food.grams_per_unit}g</span>
                             </>
                           )}
                         </div>
-                        {(proteinG || fatG || carbG) && (
+                        {(food.protein_g || food.fat_g || food.carb_g) && (
                           <div className="flex items-center gap-3 mt-2 text-xs">
-                            {proteinG > 0 && <span className="text-red-500">{proteinG}g prot</span>}
-                            {fatG > 0 && <span className="text-yellow-500">{fatG}g gord</span>}
-                            {carbG > 0 && <span className="text-amber-600">{carbG}g carb</span>}
+                            {food.protein_g && food.protein_g > 0 && <span className="text-red-500">{food.protein_g}g prot</span>}
+                            {food.fat_g && food.fat_g > 0 && <span className="text-yellow-500">{food.fat_g}g gord</span>}
+                            {food.carb_g && food.carb_g > 0 && <span className="text-amber-600">{food.carb_g}g carb</span>}
                           </div>
                         )}
                         {food.notes && (
@@ -600,12 +594,12 @@ const Foods = () => {
                         )}
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        {(food as any).reference_food_id && (
+                        {food.reference_food_id && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
                             onClick={() => {
-                              setDetailsFoodId((food as any).reference_food_id);
+                              setDetailsFoodId(food.reference_food_id);
                               setDetailsSheetOpen(true);
                             }}
                           >
