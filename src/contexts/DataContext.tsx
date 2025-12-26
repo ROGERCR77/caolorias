@@ -215,7 +215,7 @@ interface DataContextType {
   updateDog: (id: string, dog: Partial<Dog>) => Promise<void>;
   deleteDog: (id: string) => Promise<void>;
   // Food operations
-  addFood: (food: Omit<Food, "id" | "created_at">) => Promise<void>;
+  addFood: (food: Omit<Food, "id" | "created_at">) => Promise<Food>;
   updateFood: (id: string, food: Partial<Food>) => Promise<void>;
   deleteFood: (id: string) => Promise<void>;
   // Meal operations
@@ -454,6 +454,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         category: food.category,
         kcal_per_100g: food.kcal_per_100g,
         notes: food.notes,
+        // New enhanced fields
+        reference_food_id: food.reference_food_id,
+        unit_type: food.unit_type,
+        grams_per_unit: food.grams_per_unit,
+        protein_g: food.protein_g,
+        fat_g: food.fat_g,
+        carb_g: food.carb_g,
+        cost_level: food.cost_level,
       })
       .select()
       .single();
@@ -465,6 +473,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       category: data.category as Food["category"],
     };
     setFoods((prev) => [...prev, newFood]);
+    return newFood;
   };
 
   const updateFood = async (id: string, updates: Partial<Food>) => {
