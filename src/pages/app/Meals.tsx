@@ -285,7 +285,12 @@ const Meals = () => {
       return;
     }
 
-    if (formData.items.length === 0 || formData.items.some(item => !item.foodId)) {
+    const hasInvalidItems = formData.items.some(item => {
+      const hasReference = !!(item as any)._referenceFood;
+      return !item.foodId && !hasReference;
+    });
+
+    if (formData.items.length === 0 || hasInvalidItems) {
       toast({
         title: "Adicione alimentos",
         description: "Por favor, adicione pelo menos um alimento à refeição.",
