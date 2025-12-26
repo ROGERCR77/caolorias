@@ -537,7 +537,8 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
                     value={formData.birth_date}
                     onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
                     disabled={isSubmitting}
-                    className="h-14"
+                    className="h-14 w-full max-w-full"
+                    style={{ minWidth: 0 }}
                   />
                   <p className="text-xs text-muted-foreground">Aproximada, se não souber exato</p>
                 </div>
@@ -857,7 +858,23 @@ export function DogFormWizard({ editingDog, onSubmit, onCancel, getBreedByName }
           </Button>
         )}
         
-        {currentStep < 5 ? (
+        {/* When editing, always show Save button */}
+        {editingDog ? (
+          <Button 
+            type="button" 
+            variant="accent" 
+            className="flex-1 h-12" 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+              <>
+                <Check className="w-4 h-4" />
+                Salvar
+              </>
+            )}
+          </Button>
+        ) : currentStep < 5 ? (
           <Button 
             type="button" 
             className="flex-1 h-12" 

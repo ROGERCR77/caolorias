@@ -26,6 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state change:", event, session?.user?.id);
+        
+        // Handle token refresh errors
+        if (event === "TOKEN_REFRESHED") {
+          console.log("Token refreshed successfully");
+        }
+        
+        if (event === "SIGNED_OUT") {
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          if (lastLinkedUserId.current) {
+            lastLinkedUserId.current = null;
+            setTimeout(() => removeExternalUserId(), 0);
+          }
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -42,7 +60,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Error getting session:", error);
+        // If there's an error, try to refresh the session
+        supabase.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
+          if (refreshError) {
+            console.error("Error refreshing session:", refreshError);
+            setSession(null);
+            setUser(null);
+          } else {
+            setSession(refreshedSession);
+            setUser(refreshedSession?.user ?? null);
+            if (refreshedSession?.user?.id && lastLinkedUserId.current !== refreshedSession.user.id) {
+              lastLinkedUserId.current = refreshedSession.user.id;
+              setTimeout(() => setExternalUserId(refreshedSession.user.id), 0);
+            }
+          }
+          setIsLoading(false);
+        });
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);

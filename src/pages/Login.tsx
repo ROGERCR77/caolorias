@@ -220,13 +220,6 @@ const Login = () => {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="sticky bottom-0 py-4 text-center text-xs text-muted-foreground bg-background/80 backdrop-blur-sm safe-bottom">
-        <Link to="/" className="hover:text-foreground transition-colors">
-          ← Voltar para o site
-        </Link>
-      </footer>
     </div>
   );
 };

@@ -396,7 +396,7 @@ const Meals = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Cão *</Label>
                   <Select
@@ -404,7 +404,7 @@ const Meals = () => {
                     onValueChange={(v) => setFormData({ ...formData, dogId: v })}
                     disabled={isSubmitting}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecionar" />
                     </SelectTrigger>
                     <SelectContent className="bg-card">
@@ -423,6 +423,7 @@ const Meals = () => {
                     value={formData.dateTime}
                     onChange={(e) => setFormData({ ...formData, dateTime: e.target.value })}
                     disabled={isSubmitting}
+                    className="w-full"
                   />
                 </div>
               </div>
