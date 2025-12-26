@@ -19,6 +19,20 @@ import { ptBR } from "date-fns/locale";
 import { FoodSearchCombobox, FoodReferenceWithMacros } from "@/components/app/FoodSearchCombobox";
 import { formatFoodShort } from "@/lib/formatFoodDisplay";
 
+// Map food_reference category_main to foods category
+const categoryMainToCategory: Record<string, string> = {
+  "PROTEINA": "protein",
+  "CARBOIDRATO": "carb",
+  "VEGETAL": "vegetable",
+  "VISCERA": "viscera",
+  "GORDURA": "fat",
+  "SUPLEMENTO": "supplement",
+  "RACAO": "kibble",
+  "PETISCO": "treat",
+  "EXTRA": "extra",
+  "OUTRO": "other",
+};
+
 type FilterPeriod = "today" | "week" | "month" | "all";
 
 const categoryOptions = [
@@ -283,15 +297,49 @@ const Meals = () => {
     setIsSubmitting(true);
 
     try {
-      // Calculate totals
-      const totalGrams = formData.items.reduce((sum, item) => sum + item.grams, 0);
-      const totalKcalEstimated = formData.items.reduce((sum, item) => {
-        const food = foods.find((f) => f.id === item.foodId);
-        if (food?.kcal_per_100g) {
-          return sum + Math.round((item.grams * food.kcal_per_100g) / 100);
+      // Process reference foods that don't exist in user's foods yet
+      const processedItems: { foodId: string; grams: number }[] = [];
+      let totalKcalEstimated = 0;
+
+      for (const item of formData.items) {
+        const referenceFood = (item as any)._referenceFood as FoodReferenceWithMacros | undefined;
+        
+        // Check if this is a reference food that needs to be created
+        const existingFood = foods.find(f => f.id === item.foodId);
+        
+        if (referenceFood && !existingFood) {
+          // Create the food from reference
+          const category = categoryMainToCategory[referenceFood.category_main] || "other";
+          const newFood = await addFood({
+            name: referenceFood.name,
+            category: category as Food["category"],
+            kcal_per_100g: referenceFood.macros?.per_100g_kcal ? Math.round(referenceFood.macros.per_100g_kcal) : null,
+            reference_food_id: referenceFood.id,
+            unit_type: referenceFood.default_unit,
+            grams_per_unit: referenceFood.unit_gram_equivalence,
+            protein_g: referenceFood.macros?.per_100g_protein_g,
+            fat_g: referenceFood.macros?.per_100g_fat_g,
+            carb_g: referenceFood.macros?.per_100g_carb_g,
+            cost_level: referenceFood.cost_level,
+          });
+          
+          processedItems.push({ foodId: newFood.id, grams: item.grams });
+          
+          // Calculate kcal from reference data
+          if (referenceFood.macros?.per_100g_kcal) {
+            totalKcalEstimated += Math.round((item.grams * referenceFood.macros.per_100g_kcal) / 100);
+          }
+        } else {
+          processedItems.push({ foodId: item.foodId, grams: item.grams });
+          
+          // Calculate kcal from existing food
+          if (existingFood?.kcal_per_100g) {
+            totalKcalEstimated += Math.round((item.grams * existingFood.kcal_per_100g) / 100);
+          }
         }
-        return sum;
-      }, 0);
+      }
+
+      const totalGrams = processedItems.reduce((sum, item) => sum + item.grams, 0);
 
       await addMeal(
         {
@@ -301,7 +349,7 @@ const Meals = () => {
           total_grams: totalGrams,
           total_kcal_estimated: totalKcalEstimated > 0 ? totalKcalEstimated : null,
         },
-        formData.items
+        processedItems
       );
 
       // Create reminder if checkbox is checked
@@ -618,7 +666,7 @@ const Meals = () => {
                         </div>
                         
                         <div className="flex items-end gap-3">
-                          {item.unitType && item.unitType !== "GRAMA" && item.gramsPerUnit ? (
+                          {item.unitType && item.unitType !== "GRAMA" && item.gramsPerUnit && item.gramsPerUnit > 0 ? (
                             <>
                               <div className="flex-1 space-y-1">
                                 <Label className="text-xs">Quantidade</Label>
