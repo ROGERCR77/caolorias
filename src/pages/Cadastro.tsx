@@ -212,13 +212,6 @@ const Cadastro = () => {
           </div>
         </div>
       </main>
-
-      {/* Footer - fixed at bottom */}
-      <footer className="sticky bottom-0 py-4 text-center text-xs text-muted-foreground bg-background/80 backdrop-blur-sm safe-bottom">
-        <Link to="/" className="hover:text-foreground transition-colors">
-          ← Voltar para o site
-        </Link>
-      </footer>
     </div>
   );
 };
