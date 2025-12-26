@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useData } from "@/contexts/DataContext";
+import { useData, Food } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell } from "lucide-react";
@@ -21,15 +21,39 @@ import { formatFoodShort } from "@/lib/formatFoodDisplay";
 
 type FilterPeriod = "today" | "week" | "month" | "all";
 
+const categoryOptions = [
+  { value: "protein", label: "Proteína" },
+  { value: "carb", label: "Carboidrato" },
+  { value: "vegetable", label: "Vegetal" },
+  { value: "viscera", label: "Víscera" },
+  { value: "fat", label: "Gordura" },
+  { value: "supplement", label: "Suplemento" },
+  { value: "kibble", label: "Ração" },
+  { value: "treat", label: "Petisco" },
+  { value: "extra", label: "Extra" },
+  { value: "other", label: "Outro" },
+];
+
 const Meals = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { dogs, foods, meals, selectedDogId, setSelectedDogId, addMeal, deleteMeal, isLoading: dataLoading } = useData();
+  const { dogs, foods, meals, selectedDogId, setSelectedDogId, addMeal, deleteMeal, addFood, isLoading: dataLoading } = useData();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createReminder, setCreateReminder] = useState(false);
+  
+  // Custom food creation state
+  const [isCreatingCustomFood, setIsCreatingCustomFood] = useState(false);
+  const [customFoodItemIndex, setCustomFoodItemIndex] = useState<number | null>(null);
+  const [customFoodForm, setCustomFoodForm] = useState({
+    name: "",
+    category: "other" as Food["category"],
+    kcal_per_100g: "",
+    unit_type: "GRAMA",
+    grams_per_unit: "",
+  });
 
   const selectedDog = dogs.find((d) => d.id === selectedDogId);
 
@@ -68,6 +92,75 @@ const Meals = () => {
   const openNewMealDialog = () => {
     resetForm();
     setIsDialogOpen(true);
+  };
+
+  const openCustomFoodForm = (itemIndex: number) => {
+    setCustomFoodItemIndex(itemIndex);
+    setCustomFoodForm({
+      name: "",
+      category: "other",
+      kcal_per_100g: "",
+      unit_type: "GRAMA",
+      grams_per_unit: "",
+    });
+    setIsCreatingCustomFood(true);
+  };
+
+  const handleCreateCustomFood = async () => {
+    if (!customFoodForm.name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Informe o nome do alimento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const newFood = await addFood({
+        name: customFoodForm.name.trim(),
+        category: customFoodForm.category,
+        kcal_per_100g: customFoodForm.kcal_per_100g ? parseInt(customFoodForm.kcal_per_100g) : null,
+        unit_type: customFoodForm.unit_type,
+        grams_per_unit: customFoodForm.grams_per_unit ? parseFloat(customFoodForm.grams_per_unit) : null,
+      });
+
+      // Update the meal item with the new food
+      if (customFoodItemIndex !== null) {
+        setFormData((prev) => ({
+          ...prev,
+          items: prev.items.map((item, i) =>
+            i === customFoodItemIndex
+              ? {
+                  ...item,
+                  foodId: newFood.id,
+                  foodName: newFood.name,
+                  unitType: newFood.unit_type || "GRAMA",
+                  gramsPerUnit: newFood.grams_per_unit || null,
+                  grams: newFood.grams_per_unit || 100,
+                }
+              : item
+          ),
+        }));
+      }
+
+      toast({
+        title: "Alimento criado!",
+        description: `${newFood.name} foi adicionado à sua lista.`,
+      });
+
+      setIsCreatingCustomFood(false);
+      setCustomFoodItemIndex(null);
+    } catch (error) {
+      toast({
+        title: "Erro ao criar alimento",
+        description: "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addItem = () => {
@@ -508,10 +601,7 @@ const Meals = () => {
                                 cautions: null,
                               } : null}
                               onSelect={(food) => updateItemFromReference(index, food)}
-                              onCreateCustom={() => {
-                                // Fallback to existing foods selection
-                                updateItem(index, "foodId", foods[0]?.id || "");
-                              }}
+                              onCreateCustom={() => openCustomFoodForm(index)}
                               disabled={isSubmitting}
                             />
                           </div>
@@ -605,6 +695,114 @@ const Meals = () => {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Custom Food Creation Dialog */}
+        <Dialog open={isCreatingCustomFood} onOpenChange={setIsCreatingCustomFood}>
+          <DialogContent className="sm:max-w-md bg-card">
+            <DialogHeader>
+              <DialogTitle>Criar alimento personalizado</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="customFoodName">Nome do alimento *</Label>
+                <Input
+                  id="customFoodName"
+                  value={customFoodForm.name}
+                  onChange={(e) => setCustomFoodForm({ ...customFoodForm, name: e.target.value })}
+                  placeholder="Ex: Frango desfiado"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select
+                  value={customFoodForm.category}
+                  onValueChange={(v) => setCustomFoodForm({ ...customFoodForm, category: v as Food["category"] })}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card">
+                    {categoryOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customFoodKcal">Calorias por 100g (opcional)</Label>
+                <Input
+                  id="customFoodKcal"
+                  type="number"
+                  value={customFoodForm.kcal_per_100g}
+                  onChange={(e) => setCustomFoodForm({ ...customFoodForm, kcal_per_100g: e.target.value })}
+                  placeholder="Ex: 165"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Unidade de medida</Label>
+                  <Select
+                    value={customFoodForm.unit_type}
+                    onValueChange={(v) => setCustomFoodForm({ ...customFoodForm, unit_type: v })}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card">
+                      <SelectItem value="GRAMA">Gramas</SelectItem>
+                      <SelectItem value="UNIDADE">Unidade</SelectItem>
+                      <SelectItem value="COLHER_SOPA">Colher de sopa</SelectItem>
+                      <SelectItem value="COLHER_CHA">Colher de chá</SelectItem>
+                      <SelectItem value="XICARA">Xícara</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {customFoodForm.unit_type !== "GRAMA" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="customFoodGramsPerUnit">Gramas por unidade</Label>
+                    <Input
+                      id="customFoodGramsPerUnit"
+                      type="number"
+                      value={customFoodForm.grams_per_unit}
+                      onChange={(e) => setCustomFoodForm({ ...customFoodForm, grams_per_unit: e.target.value })}
+                      placeholder="Ex: 50"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1" 
+                  onClick={() => setIsCreatingCustomFood(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="accent" 
+                  className="flex-1" 
+                  onClick={handleCreateCustomFood}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Criar alimento"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
