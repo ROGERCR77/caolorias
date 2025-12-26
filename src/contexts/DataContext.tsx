@@ -54,10 +54,18 @@ export interface ActivityReference {
 export interface Food {
   id: string;
   name: string;
-  category: "protein" | "carb" | "vegetable" | "kibble" | "treat" | "other";
+  category: "protein" | "viscera" | "carb" | "vegetable" | "fat" | "supplement" | "extra" | "kibble" | "treat" | "other";
   kcal_per_100g?: number | null;
   notes?: string | null;
   created_at: string;
+  // New fields for enhanced food system
+  reference_food_id?: string | null;
+  unit_type?: string;
+  grams_per_unit?: number | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  carb_g?: number | null;
+  cost_level?: string | null;
 }
 
 export interface MealItem {

@@ -412,35 +412,189 @@ export type Database = {
         }
         Relationships: []
       }
+      food_macros_reference: {
+        Row: {
+          created_at: string | null
+          food_reference_id: string
+          id: string
+          per_100g_carb_g: number | null
+          per_100g_fat_g: number | null
+          per_100g_kcal: number
+          per_100g_protein_g: number | null
+          source_confidence: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          food_reference_id: string
+          id?: string
+          per_100g_carb_g?: number | null
+          per_100g_fat_g?: number | null
+          per_100g_kcal: number
+          per_100g_protein_g?: number | null
+          source_confidence?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          food_reference_id?: string
+          id?: string
+          per_100g_carb_g?: number | null
+          per_100g_fat_g?: number | null
+          per_100g_kcal?: number
+          per_100g_protein_g?: number | null
+          source_confidence?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_macros_reference_food_reference_id_fkey"
+            columns: ["food_reference_id"]
+            isOneToOne: true
+            referencedRelation: "food_reference"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      food_reference: {
+        Row: {
+          aliases: string[] | null
+          category_main: string
+          cautions: string | null
+          cost_level: string | null
+          created_at: string | null
+          default_unit: string
+          id: string
+          is_common_brazil: boolean | null
+          name: string
+          notes_simple: string | null
+          unit_gram_equivalence: number | null
+        }
+        Insert: {
+          aliases?: string[] | null
+          category_main: string
+          cautions?: string | null
+          cost_level?: string | null
+          created_at?: string | null
+          default_unit?: string
+          id?: string
+          is_common_brazil?: boolean | null
+          name: string
+          notes_simple?: string | null
+          unit_gram_equivalence?: number | null
+        }
+        Update: {
+          aliases?: string[] | null
+          category_main?: string
+          cautions?: string | null
+          cost_level?: string | null
+          created_at?: string | null
+          default_unit?: string
+          id?: string
+          is_common_brazil?: boolean | null
+          name?: string
+          notes_simple?: string | null
+          unit_gram_equivalence?: number | null
+        }
+        Relationships: []
+      }
+      food_substitutions: {
+        Row: {
+          can_replace_food_id: string
+          created_at: string | null
+          food_id: string
+          id: string
+          ratio_hint: string | null
+          reason: string | null
+        }
+        Insert: {
+          can_replace_food_id: string
+          created_at?: string | null
+          food_id: string
+          id?: string
+          ratio_hint?: string | null
+          reason?: string | null
+        }
+        Update: {
+          can_replace_food_id?: string
+          created_at?: string | null
+          food_id?: string
+          id?: string
+          ratio_hint?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_substitutions_can_replace_food_id_fkey"
+            columns: ["can_replace_food_id"]
+            isOneToOne: false
+            referencedRelation: "food_reference"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_substitutions_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "food_reference"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       foods: {
         Row: {
+          carb_g: number | null
           category: string | null
+          cost_level: string | null
           created_at: string
+          fat_g: number | null
+          grams_per_unit: number | null
           id: string
           kcal_per_100g: number | null
           name: string
           notes: string | null
+          protein_g: number | null
+          reference_food_id: string | null
+          unit_type: string | null
           user_id: string
         }
         Insert: {
+          carb_g?: number | null
           category?: string | null
+          cost_level?: string | null
           created_at?: string
+          fat_g?: number | null
+          grams_per_unit?: number | null
           id?: string
           kcal_per_100g?: number | null
           name: string
           notes?: string | null
+          protein_g?: number | null
+          reference_food_id?: string | null
+          unit_type?: string | null
           user_id: string
         }
         Update: {
+          carb_g?: number | null
           category?: string | null
+          cost_level?: string | null
           created_at?: string
+          fat_g?: number | null
+          grams_per_unit?: number | null
           id?: string
           kcal_per_100g?: number | null
           name?: string
           notes?: string | null
+          protein_g?: number | null
+          reference_food_id?: string | null
+          unit_type?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "foods_reference_food_id_fkey"
+            columns: ["reference_food_id"]
+            isOneToOne: false
+            referencedRelation: "food_reference"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       health_records: {
         Row: {
