@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Check, Search, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+
+// Cache configuration
+const CACHE_KEY_FOOD_REF = 'caolorias_food_refs';
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface FoodReferenceWithMacros {
   id: string;
@@ -88,52 +92,71 @@ export function FoodSearchCombobox({
   const [foodReferences, setFoodReferences] = useState<FoodReferenceWithMacros[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchFoodReferences = async () => {
-      setIsLoading(true);
-      try {
-        const { data: foods, error: foodsError } = await supabase
-          .from("food_reference")
-          .select("*")
-          .order("name");
-
-        if (foodsError) throw foodsError;
-
-        const { data: macros, error: macrosError } = await supabase
-          .from("food_macros_reference")
-          .select("*");
-
-        if (macrosError) throw macrosError;
-
-        const macrosMap = new Map(
-          macros?.map((m) => [m.food_reference_id, m])
-        );
-
-        const enrichedFoods: FoodReferenceWithMacros[] = (foods || []).map((f) => {
-          const macro = macrosMap.get(f.id);
-          return {
-            ...f,
-            macros: macro
-              ? {
-                  per_100g_kcal: macro.per_100g_kcal,
-                  per_100g_protein_g: macro.per_100g_protein_g,
-                  per_100g_fat_g: macro.per_100g_fat_g,
-                  per_100g_carb_g: macro.per_100g_carb_g,
-                }
-              : undefined,
-          };
-        });
-
-        setFoodReferences(enrichedFoods);
-      } catch (error) {
-        console.error("Error fetching food references:", error);
-      } finally {
-        setIsLoading(false);
+  const fetchFoodReferences = useCallback(async () => {
+    setIsLoading(true);
+    
+    // Check cache first
+    try {
+      const cached = localStorage.getItem(CACHE_KEY_FOOD_REF);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_EXPIRY) {
+          setFoodReferences(data);
+          setIsLoading(false);
+          return;
+        }
       }
-    };
+    } catch (e) {
+      // Ignore cache errors
+    }
 
-    fetchFoodReferences();
+    try {
+      const [foodsRes, macrosRes] = await Promise.all([
+        supabase.from("food_reference").select("*").order("name"),
+        supabase.from("food_macros_reference").select("*"),
+      ]);
+
+      if (foodsRes.error) throw foodsRes.error;
+      if (macrosRes.error) throw macrosRes.error;
+
+      const macrosMap = new Map(
+        macrosRes.data?.map((m) => [m.food_reference_id, m])
+      );
+
+      const enrichedFoods: FoodReferenceWithMacros[] = (foodsRes.data || []).map((f) => {
+        const macro = macrosMap.get(f.id);
+        return {
+          ...f,
+          macros: macro
+            ? {
+                per_100g_kcal: macro.per_100g_kcal,
+                per_100g_protein_g: macro.per_100g_protein_g,
+                per_100g_fat_g: macro.per_100g_fat_g,
+                per_100g_carb_g: macro.per_100g_carb_g,
+              }
+            : undefined,
+        };
+      });
+
+      setFoodReferences(enrichedFoods);
+      
+      // Cache the result
+      try {
+        localStorage.setItem(CACHE_KEY_FOOD_REF, JSON.stringify({ 
+          data: enrichedFoods, 
+          timestamp: Date.now() 
+        }));
+      } catch (e) { /* ignore */ }
+    } catch (error) {
+      console.error("Error fetching food references:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFoodReferences();
+  }, [fetchFoodReferences]);
 
   const filteredFoods = useMemo(() => {
     if (!search.trim()) return foodReferences;

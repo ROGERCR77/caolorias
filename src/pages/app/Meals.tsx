@@ -19,10 +19,13 @@ import { ptBR } from "date-fns/locale";
 import { FoodSearchCombobox, FoodReferenceWithMacros } from "@/components/app/FoodSearchCombobox";
 import { formatFoodShort } from "@/lib/formatFoodDisplay";
 
+import { FoodCategory } from "@/contexts/DataContext";
+
 // Map food_reference category_main to foods category
-const categoryMainToCategory: Record<string, string> = {
+const categoryMainToCategory: Record<string, FoodCategory> = {
   "PROTEINA": "protein",
   "CARBOIDRATO": "carb",
+  "CARBO": "carb",
   "VEGETAL": "vegetable",
   "VISCERA": "viscera",
   "GORDURA": "fat",
@@ -32,6 +35,16 @@ const categoryMainToCategory: Record<string, string> = {
   "EXTRA": "extra",
   "OUTRO": "other",
 };
+
+// Type for meal form items with reference food support
+interface MealFormItem {
+  foodId: string;
+  grams: number;
+  foodName?: string;
+  unitType?: string;
+  gramsPerUnit?: number | null;
+  _referenceFood?: FoodReferenceWithMacros;
+}
 
 type FilterPeriod = "today" | "week" | "month" | "all";
 
@@ -72,11 +85,16 @@ const Meals = () => {
   const selectedDog = dogs.find((d) => d.id === selectedDogId);
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    dogId: string;
+    dateTime: string;
+    title: string;
+    items: MealFormItem[];
+  }>({
     dogId: selectedDogId || "",
     dateTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     title: "",
-    items: [] as { foodId: string; grams: number; foodName?: string; unitType?: string; gramsPerUnit?: number | null }[],
+    items: [],
   });
 
   // Open dialog if ?new=true
@@ -136,8 +154,14 @@ const Meals = () => {
         name: customFoodForm.name.trim(),
         category: customFoodForm.category,
         kcal_per_100g: customFoodForm.kcal_per_100g ? parseInt(customFoodForm.kcal_per_100g) : null,
+        notes: null,
+        reference_food_id: null,
         unit_type: customFoodForm.unit_type,
         grams_per_unit: customFoodForm.grams_per_unit ? parseFloat(customFoodForm.grams_per_unit) : null,
+        protein_g: null,
+        fat_g: null,
+        carb_g: null,
+        cost_level: null,
       });
 
       // Update the meal item with the new food
@@ -189,6 +213,21 @@ const Meals = () => {
     
     // Check if food already exists in user's foods
     const existingFood = foods.find(f => f.reference_food_id === food.id);
+    
+    // Check for duplicates - same food already in the meal
+    const foodIdentifier = existingFood?.id || food.id;
+    const isDuplicate = formData.items.some((item, i) => 
+      i !== index && (item.foodId === foodIdentifier || item._referenceFood?.id === food.id)
+    );
+    
+    if (isDuplicate) {
+      toast({
+        title: "Alimento duplicado",
+        description: `${food.name} já foi adicionado nesta refeição. Edite a quantidade no item existente.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     setFormData((prev) => ({
       ...prev,
@@ -286,8 +325,7 @@ const Meals = () => {
     }
 
     const hasInvalidItems = formData.items.some(item => {
-      const hasReference = !!(item as any)._referenceFood;
-      return !item.foodId && !hasReference;
+      return !item.foodId && !item._referenceFood;
     });
 
     if (formData.items.length === 0 || hasInvalidItems) {
@@ -307,7 +345,7 @@ const Meals = () => {
       let totalKcalEstimated = 0;
 
       for (const item of formData.items) {
-        const referenceFood = (item as any)._referenceFood as FoodReferenceWithMacros | undefined;
+        const referenceFood = item._referenceFood;
         
         // Check if this is a reference food that needs to be created
         const existingFood = foods.find(f => f.id === item.foodId);
@@ -317,14 +355,15 @@ const Meals = () => {
           const category = categoryMainToCategory[referenceFood.category_main] || "other";
           const newFood = await addFood({
             name: referenceFood.name,
-            category: category as Food["category"],
+            category: category,
             kcal_per_100g: referenceFood.macros?.per_100g_kcal ? Math.round(referenceFood.macros.per_100g_kcal) : null,
+            notes: referenceFood.notes_simple || null,
             reference_food_id: referenceFood.id,
             unit_type: referenceFood.default_unit,
-            grams_per_unit: referenceFood.unit_gram_equivalence,
-            protein_g: referenceFood.macros?.per_100g_protein_g,
-            fat_g: referenceFood.macros?.per_100g_fat_g,
-            carb_g: referenceFood.macros?.per_100g_carb_g,
+            grams_per_unit: referenceFood.unit_gram_equivalence ?? null,
+            protein_g: referenceFood.macros?.per_100g_protein_g ?? null,
+            fat_g: referenceFood.macros?.per_100g_fat_g ?? null,
+            carb_g: referenceFood.macros?.per_100g_carb_g ?? null,
             cost_level: referenceFood.cost_level,
           });
           

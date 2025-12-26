@@ -51,21 +51,23 @@ export interface ActivityReference {
   observacao: string | null;
 }
 
+export type FoodCategory = "protein" | "viscera" | "carb" | "vegetable" | "fat" | "supplement" | "extra" | "kibble" | "treat" | "other";
+
 export interface Food {
   id: string;
   name: string;
-  category: "protein" | "viscera" | "carb" | "vegetable" | "fat" | "supplement" | "extra" | "kibble" | "treat" | "other";
-  kcal_per_100g?: number | null;
-  notes?: string | null;
+  category: FoodCategory;
+  kcal_per_100g: number | null;
+  notes: string | null;
   created_at: string;
-  // New fields for enhanced food system
-  reference_food_id?: string | null;
-  unit_type?: string;
-  grams_per_unit?: number | null;
-  protein_g?: number | null;
-  fat_g?: number | null;
-  carb_g?: number | null;
-  cost_level?: string | null;
+  // Enhanced food system fields
+  reference_food_id: string | null;
+  unit_type: string | null;
+  grams_per_unit: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  carb_g: number | null;
+  cost_level: string | null;
 }
 
 export interface MealItem {
