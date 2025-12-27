@@ -56,6 +56,26 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cãolorias pode usar sua localização para personalizar lembretes e notificações baseadas no seu fuso horário.</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Cãolorias não rastreia você para fins publicitários. Não exibimos anúncios e não compartilhamos seus dados com anunciantes.</string>
+	<string>Permita o rastreamento para que possamos mostrar anúncios mais relevantes e melhorar sua experiência no app.</string>
+	<key>FacebookAppID</key>
+	<string>1207937871295217</string>
+	<key>FacebookClientToken</key>
+	<string>5f1ad4aa3186f70898d7aa686c78aed7</string>
+	<key>FacebookDisplayName</key>
+	<string>Caolorias</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1207937871295217</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 </dict>
 </plist>
