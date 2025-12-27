@@ -19,6 +19,7 @@ target 'App' do
   capacitor_pods
   # Add your Pods here
   pod 'Firebase/Analytics'
+  pod 'FBSDKCoreKit'
 end
 
 post_install do |installer|

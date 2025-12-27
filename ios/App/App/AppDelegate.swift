@@ -2,6 +2,8 @@ import UIKit
 import Capacitor
 import UserNotifications
 import FirebaseCore
+import FBSDKCoreKit
+import AppTrackingTransparency
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -11,6 +13,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure()
+        
+        // Initialize Facebook SDK
+        ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
+        
+        // Enable automatic event logging
+        Settings.shared.isAutoLogAppEventsEnabled = true
+        Settings.shared.isAdvertiserIDCollectionEnabled = true
         
         // Set notification delegate for foreground notifications
         UNUserNotificationCenter.current().delegate = self
@@ -35,6 +44,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused while the application was inactive.
+        
+        // Request App Tracking Transparency permission
+        if #available(iOS 14, *) {
+            ATTrackingManager.requestTrackingAuthorization { status in
+                switch status {
+                case .authorized:
+                    Settings.shared.isAdvertiserTrackingEnabled = true
+                case .denied, .restricted, .notDetermined:
+                    Settings.shared.isAdvertiserTrackingEnabled = false
+                @unknown default:
+                    Settings.shared.isAdvertiserTrackingEnabled = false
+                }
+            }
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -42,6 +65,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        // Handle Facebook URL
+        if ApplicationDelegate.shared.application(app, open: url, options: options) {
+            return true
+        }
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
