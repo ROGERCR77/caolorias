@@ -472,6 +472,58 @@ async function checkPuppyTransitionNotifications(
   return notifications;
 }
 
+async function checkNoDogNotifications(
+  supabase: SupabaseClient,
+  today: Date
+): Promise<Notification[]> {
+  const notifications: Notification[] = [];
+  const oneDayAgo = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  
+  console.log('🐕 Checking for users without dogs...');
+  
+  // Get all profiles created more than 24h ago
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('user_id, name, created_at')
+    .lt('created_at', oneDayAgo.toISOString());
+
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError);
+    return notifications;
+  }
+
+  for (const profile of profiles || []) {
+    // Check if user has any dog
+    const { count, error: countError } = await supabase
+      .from('dogs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', profile.user_id);
+      
+    if (countError) {
+      console.error('Error checking dogs for user:', profile.user_id, countError);
+      continue;
+    }
+
+    if (count === 0) {
+      const daysSinceSignup = Math.floor(
+        (today.getTime() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      
+      console.log(`📌 User ${profile.name} (${profile.user_id}) has no dog - ${daysSinceSignup} days since signup`);
+      
+      notifications.push({
+        user_id: profile.user_id,
+        title: '🐕 Falta pouco!',
+        message: `Oi ${profile.name || 'tutor'}! Cadastre seu cão para começar a acompanhar a alimentação.`,
+        category: 'onboarding'
+      });
+    }
+  }
+  
+  console.log(`🐕 Found ${notifications.length} users without dogs`);
+  return notifications;
+}
+
 async function checkCalorieNotifications(
   supabase: SupabaseClient,
   userDogs: UserDogData[],
@@ -613,7 +665,8 @@ serve(async (req) => {
       birthdayNotifications,
       streakNotifications,
       calorieNotifications,
-      puppyTransitionNotifications
+      puppyTransitionNotifications,
+      noDogNotifications
     ] = await Promise.all([
       checkMealNotifications(supabase, userDogs, today),
       checkWeightNotifications(supabase, userDogs, today),
@@ -626,7 +679,8 @@ serve(async (req) => {
       checkBirthdayNotifications(userDogs, today),
       checkStreakNotifications(supabase, userDogs, today),
       checkCalorieNotifications(supabase, userDogs, today),
-      checkPuppyTransitionNotifications(supabase, userDogs, today)
+      checkPuppyTransitionNotifications(supabase, userDogs, today),
+      checkNoDogNotifications(supabase, today)
     ]);
 
     // Combine all notifications
@@ -642,7 +696,8 @@ serve(async (req) => {
       ...birthdayNotifications,
       ...streakNotifications,
       ...calorieNotifications,
-      ...puppyTransitionNotifications
+      ...puppyTransitionNotifications,
+      ...noDogNotifications
     ];
 
     // Deduplicate by user_id + category (max 1 per category per user)
