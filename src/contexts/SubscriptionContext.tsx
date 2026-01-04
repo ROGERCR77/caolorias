@@ -91,7 +91,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const platform = Capacitor.getPlatform();
 
   // Handle approved transaction - validate with backend
-  const handleApprovedTransaction = async (transaction: any) => {
+  // silent = true means don't show error toasts (for background validation)
+  const handleApprovedTransaction = async (transaction: any, silent = false) => {
     try {
       console.log("IAP: Validating transaction with backend...");
       console.log("IAP: Transaction details:", {
@@ -142,12 +143,26 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Validate receipt data before sending
+      if (!receiptData || receiptData.length < 100) {
+        console.log("IAP: Receipt data too short or invalid, skipping validation");
+        if (!silent) {
+          toast({
+            title: "Erro na validação",
+            description: "Dados de recibo inválidos. Tente restaurar as compras.",
+            variant: "destructive",
+          });
+        }
+        return false;
+      }
+
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.access_token) {
         throw new Error("Usuário não autenticado");
       }
 
       console.log("IAP: Calling validate-iap-receipt edge function...");
+      console.log("IAP: Receipt data length:", receiptData.length);
       
       const response = await supabase.functions.invoke("validate-iap-receipt", {
         body: {
@@ -177,11 +192,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error("IAP: Failed to validate transaction", error);
-      toast({
-        title: "Erro na validação",
-        description: error.message || "Não foi possível ativar sua assinatura. Tente restaurar as compras.",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Erro na validação",
+          description: error.message || "Não foi possível ativar sua assinatura. Tente restaurar as compras.",
+          variant: "destructive",
+        });
+      }
       return false;
     }
   };
