@@ -3,7 +3,7 @@ import { ArrowLeft, Dog } from "lucide-react";
 
 const Privacy = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background safe-top">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b">
         <div className="container px-4">
