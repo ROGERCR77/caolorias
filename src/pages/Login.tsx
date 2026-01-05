@@ -88,7 +88,7 @@ const Login = () => {
   const isTutor = mode === "tutor";
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background safe-top">
+    <div className="min-h-[100dvh] flex flex-col bg-background safe-top overflow-x-hidden">
       {/* Decorative background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${isTutor ? "from-primary/5 via-transparent to-accent/5" : "from-blue-500/5 via-transparent to-teal-500/5"} pointer-events-none`} />
       <div className={`absolute top-0 right-0 w-64 h-64 ${isTutor ? "bg-primary/10" : "bg-blue-500/10"} rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`} />
