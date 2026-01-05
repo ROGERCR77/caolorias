@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { Loader2 } from "lucide-react";
 import { OnboardingScreen } from "@/components/app/OnboardingScreen";
 

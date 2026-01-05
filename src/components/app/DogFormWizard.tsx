@@ -10,7 +10,7 @@ import { BreedCombobox } from "@/components/app/BreedCombobox";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { compressImage } from "@/lib/imageCompression";
 import { useAuth } from "@/contexts/AuthContext";
 const porteToSize: Record<string, string> = {
