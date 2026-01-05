@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
 
 import { ProtectedVetRoute } from "@/components/ProtectedVetRoute";
+import { NativeNavigationProvider } from "@/components/app/NativeNavigationProvider";
 
 // Lazy load pages for better performance
 const Login = lazy(() => import("./pages/Login"));
@@ -120,8 +121,9 @@ const App = () => {
                   <Toaster />
                   <Sonner />
                   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                    <Suspense fallback={<PageLoader />}>
-                    <Routes>
+                    <NativeNavigationProvider>
+                      <Suspense fallback={<PageLoader />}>
+                        <Routes>
                       {/* Public routes */}
                       <Route path="/" element={<Login />} />
                       <Route path="/cadastro" element={<Cadastro />} />
@@ -162,10 +164,11 @@ const App = () => {
                       <Route path="/app" element={<Navigate to="/app/hoje" replace />} />
 
                       {/* Catch-all */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </BrowserRouter>
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </Suspense>
+                    </NativeNavigationProvider>
+                  </BrowserRouter>
               </TooltipProvider>
             </DataProvider>
           </SubscriptionProvider>

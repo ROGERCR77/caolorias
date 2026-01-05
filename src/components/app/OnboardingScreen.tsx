@@ -101,7 +101,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const isLastSlide = currentIndex === slides.length - 1;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col safe-top safe-bottom">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col safe-top safe-bottom" data-no-swipe-back>
       {/* Skip button */}
       <div className="flex justify-end p-4">
         <Button
