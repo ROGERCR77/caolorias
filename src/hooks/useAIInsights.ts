@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dog, Food, Meal, WeightLog, MealPlan, BreedReference, ActivityReference } from "@/contexts/DataContext";
 import { subDays, parseISO, isWithinInterval, startOfDay, isToday } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 export interface AIInsight {
   tipo: string;

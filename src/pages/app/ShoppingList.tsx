@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
 import { useData } from "@/contexts/DataContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

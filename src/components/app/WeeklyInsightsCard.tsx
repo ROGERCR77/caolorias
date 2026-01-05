@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { 
   Sparkles, TrendingUp, TrendingDown, Minus, 
   Target, Flame, Scale, Crown, ChevronRight

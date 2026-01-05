@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dog, Loader2, Eye, EyeOff, Stethoscope } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 type LoginMode = "tutor" | "vet";
 

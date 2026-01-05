@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { useData, Food } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from "date-fns";

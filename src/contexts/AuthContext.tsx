@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { Capacitor } from "@capacitor/core";
-import { supabase } from "@/integrations/supabase/client";
-import { supabaseNative } from "@/integrations/supabase/nativeClient";
+import { supabase } from "@/lib/supabaseClient";
 import { useOneSignal } from "@/hooks/useOneSignal";
 
 interface AuthContextType {
@@ -23,13 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { setExternalUserId, removeExternalUserId } = useOneSignal();
   const lastLinkedUserId = useRef<string | null>(null);
-  
-  // Use native client on mobile for proper session persistence
-  const authClient = Capacitor.isNativePlatform() ? supabaseNative : supabase;
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = authClient.auth.onAuthStateChange(
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change:", event, session?.user?.id);
         
@@ -65,11 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    authClient.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("Error getting session:", error);
         // If there's an error, try to refresh the session
-        authClient.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
+        supabase.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
           if (refreshError) {
             console.error("Error refreshing session:", refreshError);
             setSession(null);
@@ -98,10 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [setExternalUserId, removeExternalUserId, authClient]);
+  }, [setExternalUserId, removeExternalUserId]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await authClient.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -117,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await authClient.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -139,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = async () => {
     const redirectUrl = `${window.location.origin}/app/hoje`;
     
-    const { error } = await authClient.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
         redirectTo: redirectUrl,
@@ -153,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     removeExternalUserId();
-    const { error } = await authClient.auth.signOut();
+    const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
   };
 
