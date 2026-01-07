@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode, useRef } fro
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import { useOneSignal } from "@/hooks/useOneSignal";
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const lastLinkedUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    let appListenerHandle: { remove: () => void } | null = null;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -59,17 +63,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    // Listener para quando o app volta do background (iOS/Android)
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('appStateChange', async ({ isActive }) => {
+        if (!isActive) return;
+        console.log('[Auth] App became active, checking session...');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            // Tentar refresh para garantir token válido
+            await supabase.auth.refreshSession();
+          }
+        } catch (error) {
+          console.error('[Auth] Error refreshing on resume:', error);
+          // NÃO limpar sessão aqui - pode ser erro de rede temporário
+        }
+      }).then((handle) => {
+        appListenerHandle = handle;
+      });
+    }
+
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("Error getting session:", error);
-        // If there's an error, try to refresh the session
+        // NÃO limpar sessão imediatamente - tentar refresh
         supabase.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
           if (refreshError) {
             console.error("Error refreshing session:", refreshError);
-            setSession(null);
-            setUser(null);
-          } else {
+            // NÃO limpar sessão aqui - deixar o listener resolver se houver sessão válida
+          } else if (refreshedSession) {
             setSession(refreshedSession);
             setUser(refreshedSession?.user ?? null);
             if (refreshedSession?.user?.id && lastLinkedUserId.current !== refreshedSession.user.id) {
@@ -92,7 +115,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      // Cleanup do listener do Capacitor
+      appListenerHandle?.remove();
+    };
   }, [setExternalUserId, removeExternalUserId]);
 
   const signIn = async (email: string, password: string) => {
