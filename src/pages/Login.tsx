@@ -88,11 +88,11 @@ const Login = () => {
   const isTutor = mode === "tutor";
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background safe-top overflow-x-hidden">
-      {/* Decorative background */}
+    <div className="min-h-[100dvh] flex flex-col bg-background safe-top overflow-hidden">
+      {/* Decorative background - contained within viewport */}
       <div className={`absolute inset-0 bg-gradient-to-br ${isTutor ? "from-primary/5 via-transparent to-accent/5" : "from-blue-500/5 via-transparent to-teal-500/5"} pointer-events-none`} />
-      <div className={`absolute top-0 right-0 w-64 h-64 ${isTutor ? "bg-primary/10" : "bg-blue-500/10"} rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`} />
-      <div className={`absolute bottom-0 left-0 w-64 h-64 ${isTutor ? "bg-accent/10" : "bg-teal-500/10"} rounded-full blur-3xl translate-y-1/2 -translate-x-1/2`} />
+      <div className={`absolute -top-32 -right-32 w-64 h-64 ${isTutor ? "bg-primary/10" : "bg-blue-500/10"} rounded-full blur-3xl`} />
+      <div className={`absolute -bottom-32 -left-32 w-64 h-64 ${isTutor ? "bg-accent/10" : "bg-teal-500/10"} rounded-full blur-3xl`} />
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto keyboard-scroll-container px-6 py-8 relative z-10">
