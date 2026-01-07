@@ -1,18 +1,19 @@
 import { createRoot } from "react-dom/client";
-import { createClient } from '@supabase/supabase-js';
-import { Capacitor } from '@capacitor/core';
-import App from "./App.tsx";
+import { Capacitor } from "@capacitor/core";
 import "./index.css";
-import { capacitorStorage, migrateSessionToNativeStorage } from "@/lib/capacitorStorage";
 
-// Reconfigure Supabase client for native platforms with persistent storage
-async function initializeApp() {
-  // On native platforms, migrate any existing localStorage session to native storage
+async function bootstrap() {
+  // 1. Migrar sessão ANTES de importar o App (que importa supabaseClient)
   if (Capacitor.isNativePlatform()) {
+    const { migrateSessionToNativeStorage } = await import("./lib/capacitorStorage");
     await migrateSessionToNativeStorage();
   }
 
+  // 2. Só agora importa o App (após migração estar completa)
+  const { default: App } = await import("./App");
+
+  // 3. Render
   createRoot(document.getElementById("root")!).render(<App />);
 }
 
-initializeApp();
+bootstrap();
