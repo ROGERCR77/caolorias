@@ -7,7 +7,26 @@ export const capacitorStorage = {
   getItem: async (key: string): Promise<string | null> => {
     try {
       if (Capacitor.isNativePlatform()) {
-        const { value } = await Preferences.get({ key });
+        console.log(`[Storage] getItem called for key: "${key}"`);
+        let { value } = await Preferences.get({ key });
+        
+        // Fallback: if not found and it's an auth key, search for any sb-*-auth-token
+        if (!value && key.endsWith('-auth-token')) {
+          console.log(`[Storage] Key not found, searching for any auth token...`);
+          const { keys } = await Preferences.keys();
+          const authKeys = keys.filter(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+          console.log(`[Storage] Found auth keys:`, authKeys);
+          
+          if (authKeys.length > 0) {
+            const fallbackResult = await Preferences.get({ key: authKeys[0] });
+            if (fallbackResult.value) {
+              console.log(`[Storage] Using fallback key: "${authKeys[0]}"`);
+              value = fallbackResult.value;
+            }
+          }
+        }
+        
+        console.log(`[Storage] getItem "${key}": ${value ? 'FOUND (' + value.length + ' chars)' : 'NOT FOUND'}`);
         return value ?? null;
       }
       return localStorage.getItem(key);
@@ -19,7 +38,9 @@ export const capacitorStorage = {
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       if (Capacitor.isNativePlatform()) {
+        console.log(`[Storage] setItem called for key: "${key}" (${value.length} chars)`);
         await Preferences.set({ key, value });
+        console.log(`[Storage] setItem "${key}": SUCCESS`);
       } else {
         localStorage.setItem(key, value);
       }
@@ -30,7 +51,9 @@ export const capacitorStorage = {
   removeItem: async (key: string): Promise<void> => {
     try {
       if (Capacitor.isNativePlatform()) {
+        console.log(`[Storage] removeItem called for key: "${key}"`);
         await Preferences.remove({ key });
+        console.log(`[Storage] removeItem "${key}": SUCCESS`);
       } else {
         localStorage.removeItem(key);
       }
