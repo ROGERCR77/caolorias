@@ -90,10 +90,17 @@ export async function migrateSessionToNativeStorage(): Promise<void> {
 
     if (sessionData) {
       console.log(`[Migration] Migrating session from localStorage (${foundKey})`);
+      
+      // Salvar na key primária
       await Preferences.set({ key: primaryKey, value: sessionData });
-      // Remover do localStorage após migrar para evitar duplicação
-      localStorage.removeItem(foundKey);
-      console.log('[Migration] Session migrated successfully');
+      
+      // Se encontrou outra key, salvar nela também (evita mismatch)
+      if (foundKey && foundKey !== primaryKey) {
+        await Preferences.set({ key: foundKey, value: sessionData });
+      }
+      
+      // NÃO remover do localStorage ainda (safe mode)
+      console.log('[Migration] Session migrated successfully (safe mode - localStorage kept)');
     } else {
       console.log('[Migration] No session found in localStorage');
     }
