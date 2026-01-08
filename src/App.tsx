@@ -17,6 +17,7 @@ import { NativeNavigationProvider } from "@/components/app/NativeNavigationProvi
 
 // Lazy load pages for better performance
 const Login = lazy(() => import("./pages/Login"));
+const RootGate = lazy(() => import("./pages/RootGate"));
 const Cadastro = lazy(() => import("./pages/Cadastro"));
 const CadastroVet = lazy(() => import("./pages/CadastroVet"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -125,7 +126,7 @@ const App = () => {
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                       {/* Public routes */}
-                      <Route path="/" element={<Login />} />
+                      <Route path="/" element={<RootGate />} />
                       <Route path="/cadastro" element={<Cadastro />} />
                       <Route path="/cadastro-vet" element={<CadastroVet />} />
                       <Route path="/termos" element={<Terms />} />
