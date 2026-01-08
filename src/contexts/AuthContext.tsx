@@ -27,16 +27,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let appListenerHandle: { remove: () => void } | null = null;
 
-    // Set up auth state listener FIRST
+    // O onAuthStateChange vai disparar INITIAL_SESSION quando terminar
+    // de verificar o storage - esse é o momento correto para setar isLoading=false
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change:", event, session?.user?.id);
         
-        // Handle token refresh errors
-        if (event === "TOKEN_REFRESHED") {
-          console.log("Token refreshed successfully");
+        // INITIAL_SESSION = Supabase terminou de verificar storage
+        // Pode ter sessão ou não, mas agora sabemos o estado real
+        if (event === "INITIAL_SESSION") {
+          console.log("[Auth] Initial session resolved:", session ? "HAS SESSION" : "NO SESSION");
+          setSession(session);
+          setUser(session?.user ?? null);
+          setIsLoading(false); // SÓ aqui setamos isLoading=false
+          
+          if (session?.user?.id) {
+            lastLinkedUserId.current = session.user.id;
+            setTimeout(() => setExternalUserId(session.user.id), 0);
+          }
+          return;
         }
         
+        // TOKEN_REFRESHED - atualizar sessão silenciosamente
+        if (event === "TOKEN_REFRESHED") {
+          console.log("Token refreshed successfully");
+          setSession(session);
+          setUser(session?.user ?? null);
+          return;
+        }
+        
+        // SIGNED_IN após login manual
+        if (event === "SIGNED_IN") {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
+            lastLinkedUserId.current = session.user.id;
+            setTimeout(() => setExternalUserId(session.user.id), 0);
+          }
+          return;
+        }
+        
+        // SIGNED_OUT
         if (event === "SIGNED_OUT") {
           setSession(null);
           setUser(null);
@@ -47,19 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           return;
         }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-
-        // Link/unlink OneSignal user
-        if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
-          lastLinkedUserId.current = session.user.id;
-          setTimeout(() => setExternalUserId(session.user.id), 0);
-        } else if (!session?.user && lastLinkedUserId.current) {
-          lastLinkedUserId.current = null;
-          setTimeout(() => removeExternalUserId(), 0);
-        }
       }
     );
 
@@ -67,57 +85,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener('appStateChange', async ({ isActive }) => {
         if (!isActive) return;
-        console.log('[Auth] App became active, checking session...');
+        console.log('[Auth] App became active, refreshing session...');
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            // Tentar refresh para garantir token válido
-            await supabase.auth.refreshSession();
+          const { data, error } = await supabase.auth.refreshSession();
+          if (error) {
+            console.error('[Auth] Error refreshing session on resume:', error);
+          } else if (data.session) {
+            console.log('[Auth] Session refreshed successfully on resume');
           }
         } catch (error) {
-          console.error('[Auth] Error refreshing on resume:', error);
-          // NÃO limpar sessão aqui - pode ser erro de rede temporário
+          console.error('[Auth] Error in refresh on resume:', error);
         }
       }).then((handle) => {
         appListenerHandle = handle;
       });
     }
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error("Error getting session:", error);
-        // NÃO limpar sessão imediatamente - tentar refresh
-        supabase.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
-          if (refreshError) {
-            console.error("Error refreshing session:", refreshError);
-            // NÃO limpar sessão aqui - deixar o listener resolver se houver sessão válida
-          } else if (refreshedSession) {
-            setSession(refreshedSession);
-            setUser(refreshedSession?.user ?? null);
-            if (refreshedSession?.user?.id && lastLinkedUserId.current !== refreshedSession.user.id) {
-              lastLinkedUserId.current = refreshedSession.user.id;
-              setTimeout(() => setExternalUserId(refreshedSession.user.id), 0);
-            }
-          }
-          setIsLoading(false);
-        });
-        return;
-      }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-
-      if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
-        lastLinkedUserId.current = session.user.id;
-        setTimeout(() => setExternalUserId(session.user.id), 0);
-      }
-    });
+    // REMOVIDO: getSession() que setava isLoading=false prematuramente
+    // Agora confiamos apenas no INITIAL_SESSION do onAuthStateChange
 
     return () => {
       subscription.unsubscribe();
-      // Cleanup do listener do Capacitor
       appListenerHandle?.remove();
     };
   }, [setExternalUserId, removeExternalUserId]);
