@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { session, user, isLoading } = useAuth();
   const { isVet, isLoading: roleLoading } = useUserRole();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
@@ -156,7 +156,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return <Navigate to="/" replace />;
   }
 
