@@ -11,23 +11,49 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const projectRef = SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase/)?.[1] || 'tcriouzorxknubqqnvyj';
 const STORAGE_KEY = `sb-${projectRef}-auth-token`;
 
-// Log para diagnóstico
-console.log('[SupabaseClient] Initializing...', {
-  hasUrl: !!SUPABASE_URL,
-  hasKey: !!SUPABASE_KEY,
-  projectRef,
-  storageKey: STORAGE_KEY,
-  isNative: Capacitor.isNativePlatform()
-});
+// CORREÇÃO CRÍTICA: Criar o client de forma lazy para garantir que a migração já rodou
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
-// Single client that uses native storage on mobile (Capacitor Preferences)
-// and localStorage on web - ensures session persists across app restarts
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    storage: Capacitor.isNativePlatform() ? capacitorStorage : localStorage,
-    storageKey: STORAGE_KEY, // Explicit key for consistency across platforms
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: !Capacitor.isNativePlatform(), // false on native, true on web
+function getSupabaseClient() {
+  if (!supabaseInstance) {
+    // Verificar novamente no momento da criação (não só no import)
+    const isNative = Capacitor.isNativePlatform();
+    
+    console.log('[SupabaseClient] Creating client (lazy init)...', {
+      hasUrl: !!SUPABASE_URL,
+      hasKey: !!SUPABASE_KEY,
+      projectRef,
+      storageKey: STORAGE_KEY,
+      isNative,
+      storageType: isNative ? 'Preferences' : 'localStorage'
+    });
+    
+    supabaseInstance = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        storage: isNative ? capacitorStorage : localStorage,
+        storageKey: STORAGE_KEY,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: !isNative,
+      }
+    });
+  }
+  
+  return supabaseInstance;
+}
+
+// Export como Proxy para garantir lazy initialization
+// O client só será criado quando realmente usado, após a migração ter rodado
+export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = client[prop as keyof typeof client];
+    
+    // Se for uma função, bind para manter o contexto
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    
+    return value;
   }
 });
