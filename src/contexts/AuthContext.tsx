@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import { supabase } from "@/lib/supabaseClient";
 import { useOneSignal } from "@/hooks/useOneSignal";
 
@@ -21,9 +23,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { setExternalUserId, removeExternalUserId } = useOneSignal();
   const lastLinkedUserId = useRef<string | null>(null);
+  const appStateListenerRef = useRef<any>(null);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener FIRST - this is the source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change:", event, session?.user?.id);
@@ -60,25 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
+    // NÃO limpar sessão se houver erro - onAuthStateChange é a fonte da verdade
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("Error getting session:", error);
-        // If there's an error, try to refresh the session
-        supabase.auth.refreshSession().then(({ data: { session: refreshedSession }, error: refreshError }) => {
-          if (refreshError) {
-            console.error("Error refreshing session:", refreshError);
-            setSession(null);
-            setUser(null);
-          } else {
-            setSession(refreshedSession);
-            setUser(refreshedSession?.user ?? null);
-            if (refreshedSession?.user?.id && lastLinkedUserId.current !== refreshedSession.user.id) {
-              lastLinkedUserId.current = refreshedSession.user.id;
-              setTimeout(() => setExternalUserId(refreshedSession.user.id), 0);
-            }
-          }
-          setIsLoading(false);
-        });
+        // Não limpar sessão por erro transitório - apenas logar
+        // onAuthStateChange vai atualizar o estado se necessário
+        setIsLoading(false);
         return;
       }
       
@@ -92,7 +83,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // App state change listener (Capacitor) - registrado uma única vez
+    if (Capacitor.isNativePlatform()) {
+      // Inicializar listener de forma assíncrona
+      App.addListener('appStateChange', async ({ isActive }) => {
+        if (isActive) {
+          console.log("App became active, checking session...");
+          
+          try {
+            // Verificar sessão atual
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError) {
+              console.error("Error getting session on app state change:", sessionError);
+              // NÃO limpar sessão - erro pode ser transitório
+              return;
+            }
+            
+            if (session) {
+              console.log("Session found, attempting refresh...");
+              // Tentar refresh do token
+              const { error: refreshError } = await supabase.auth.refreshSession();
+              
+              if (refreshError) {
+                console.error("Error refreshing session on app state change:", refreshError);
+                // NÃO limpar sessão - erro pode ser de rede transitório
+                // onAuthStateChange vai lidar com isso
+              } else {
+                console.log("Session refreshed successfully");
+              }
+            }
+          } catch (error) {
+            console.error("Error in app state change handler:", error);
+            // NUNCA limpar sessão em erro de rede
+          }
+        }
+      }).then((listener) => {
+        appStateListenerRef.current = listener;
+      }).catch((error) => {
+        console.error("Error setting up app state listener:", error);
+      });
+    }
+
+    // Cleanup: unsubscribe de ambos os listeners
+    return () => {
+      subscription.unsubscribe();
+      if (appStateListenerRef.current) {
+        appStateListenerRef.current.remove().catch((error: any) => {
+          console.error("Error removing app state listener:", error);
+        });
+        appStateListenerRef.current = null;
+      }
+    };
   }, [setExternalUserId, removeExternalUserId]);
 
   const signIn = async (email: string, password: string) => {
