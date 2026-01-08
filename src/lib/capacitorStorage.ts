@@ -12,16 +12,24 @@ export const capacitorStorage = {
         
         // Fallback: if not found and it's an auth key, search for any sb-*-auth-token
         if (!value && key.endsWith('-auth-token')) {
-          console.log(`[Storage] Key not found, searching for any auth token...`);
+          console.log(`[Storage] Primary key not found, searching for any auth token...`);
           const { keys } = await Preferences.keys();
+          console.log(`[Storage] All Preferences keys:`, keys);
+          
           const authKeys = keys.filter(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
           console.log(`[Storage] Found auth keys:`, authKeys);
           
           if (authKeys.length > 0) {
-            const fallbackResult = await Preferences.get({ key: authKeys[0] });
-            if (fallbackResult.value) {
-              console.log(`[Storage] Using fallback key: "${authKeys[0]}"`);
-              value = fallbackResult.value;
+            // Tentar todas as keys encontradas
+            for (const authKey of authKeys) {
+              const fallbackResult = await Preferences.get({ key: authKey });
+              if (fallbackResult.value) {
+                console.log(`[Storage] Using fallback key: "${authKey}" (${fallbackResult.value.length} chars)`);
+                // CORREÇÃO: Salvar também na key primária para próxima vez
+                await Preferences.set({ key, value: fallbackResult.value });
+                value = fallbackResult.value;
+                break;
+              }
             }
           }
         }
@@ -41,6 +49,14 @@ export const capacitorStorage = {
         console.log(`[Storage] setItem called for key: "${key}" (${value.length} chars)`);
         await Preferences.set({ key, value });
         console.log(`[Storage] setItem "${key}": SUCCESS`);
+        
+        // Verificar se foi salvo corretamente
+        const verify = await Preferences.get({ key });
+        if (verify.value !== value) {
+          console.error(`[Storage] WARNING: Value mismatch after save!`);
+        } else {
+          console.log(`[Storage] Verified: Value saved correctly`);
+        }
       } else {
         localStorage.setItem(key, value);
       }
@@ -89,6 +105,7 @@ export async function migrateSessionToNativeStorage(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   const primaryKey = getSupabaseAuthKey();
+  console.log(`[Migration] Primary key: ${primaryKey}`);
 
   try {
     // Já existe no storage nativo?
@@ -108,6 +125,7 @@ export async function migrateSessionToNativeStorage(): Promise<void> {
       if (found) {
         sessionData = found.value;
         foundKey = found.key;
+        console.log(`[Migration] Found session in localStorage with key: ${foundKey}`);
       }
     }
 
@@ -116,10 +134,12 @@ export async function migrateSessionToNativeStorage(): Promise<void> {
       
       // Salvar na key primária
       await Preferences.set({ key: primaryKey, value: sessionData });
+      console.log(`[Migration] Saved to primary key: ${primaryKey}`);
       
       // Se encontrou outra key, salvar nela também (evita mismatch)
       if (foundKey && foundKey !== primaryKey) {
         await Preferences.set({ key: foundKey, value: sessionData });
+        console.log(`[Migration] Also saved to fallback key: ${foundKey}`);
       }
       
       // NÃO remover do localStorage ainda (safe mode)

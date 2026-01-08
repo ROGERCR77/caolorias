@@ -3,10 +3,19 @@ import { Capacitor } from "@capacitor/core";
 import "./index.css";
 
 async function bootstrap() {
-  // 1. Diagnóstico e migração de sessão ANTES de importar o App
+  // 1. Migração ANTES de qualquer import que use Supabase
   if (Capacitor.isNativePlatform()) {
-    const { migrateSessionToNativeStorage } = await import("./lib/capacitorStorage");
-    await migrateSessionToNativeStorage();
+    console.log('[Boot] Starting session migration...');
+    try {
+      const { migrateSessionToNativeStorage } = await import("./lib/capacitorStorage");
+      await migrateSessionToNativeStorage();
+      console.log('[Boot] Session migration completed');
+      
+      // Aguardar um tick para garantir que o storage está sincronizado
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      console.error('[Boot] Migration error:', error);
+    }
   }
 
   // 2. Só agora importa o App (após migração estar completa)

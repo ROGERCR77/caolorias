@@ -11,6 +11,15 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const projectRef = SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase/)?.[1] || 'tcriouzorxknubqqnvyj';
 const STORAGE_KEY = `sb-${projectRef}-auth-token`;
 
+// Log para diagnóstico
+console.log('[SupabaseClient] Initializing...', {
+  hasUrl: !!SUPABASE_URL,
+  hasKey: !!SUPABASE_KEY,
+  projectRef,
+  storageKey: STORAGE_KEY,
+  isNative: Capacitor.isNativePlatform()
+});
+
 // Single client that uses native storage on mobile (Capacitor Preferences)
 // and localStorage on web - ensures session persists across app restarts
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {

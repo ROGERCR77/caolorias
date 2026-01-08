@@ -23,9 +23,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { setExternalUserId, removeExternalUserId } = useOneSignal();
   const lastLinkedUserId = useRef<string | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasReceivedInitialSession = useRef(false);
 
   useEffect(() => {
     let appListenerHandle: { remove: () => void } | null = null;
+
+    console.log('[Auth] useEffect mounted, setting up auth listener...');
+
+    // CORREÇÃO: Timeout de segurança caso INITIAL_SESSION não dispare
+    initTimeoutRef.current = setTimeout(async () => {
+      if (!hasReceivedInitialSession.current) {
+        console.warn('[Auth] INITIAL_SESSION timeout (3s), checking session manually...');
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error('[Auth] Error getting session on timeout:', error);
+          } else {
+            console.log('[Auth] Manual session check result:', session ? `HAS SESSION (user: ${session.user.id})` : 'NO SESSION');
+            setSession(session);
+            setUser(session?.user ?? null);
+            hasReceivedInitialSession.current = true;
+          }
+        } catch (err) {
+          console.error('[Auth] Error in manual session check:', err);
+        }
+        setIsLoading(false);
+      }
+    }, 3000); // 3 segundos de timeout
 
     // O onAuthStateChange vai disparar INITIAL_SESSION quando terminar
     // de verificar o storage - esse é o momento correto para setar isLoading=false
@@ -36,7 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // INITIAL_SESSION = Supabase terminou de verificar storage
         // Pode ter sessão ou não, mas agora sabemos o estado real
         if (event === "INITIAL_SESSION") {
-          console.log("[Auth] Initial session resolved:", session ? "HAS SESSION" : "NO SESSION");
+          hasReceivedInitialSession.current = true;
+          if (initTimeoutRef.current) {
+            clearTimeout(initTimeoutRef.current);
+            initTimeoutRef.current = null;
+          }
+          
+          console.log("[Auth] Initial session resolved:", session ? `HAS SESSION (user: ${session.user.id})` : "NO SESSION");
           setSession(session);
           setUser(session?.user ?? null);
           setIsLoading(false); // SÓ aqui setamos isLoading=false
@@ -58,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // SIGNED_IN após login manual
         if (event === "SIGNED_IN") {
+          console.log("[Auth] User signed in:", session?.user?.id);
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user?.id && lastLinkedUserId.current !== session.user.id) {
@@ -69,9 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // SIGNED_OUT
         if (event === "SIGNED_OUT") {
+          console.log("[Auth] User signed out");
           setSession(null);
           setUser(null);
           setIsLoading(false);
+          hasReceivedInitialSession.current = false;
           if (lastLinkedUserId.current) {
             lastLinkedUserId.current = null;
             setTimeout(() => removeExternalUserId(), 0);
@@ -105,6 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Agora confiamos apenas no INITIAL_SESSION do onAuthStateChange
 
     return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
       subscription.unsubscribe();
       appListenerHandle?.remove();
     };
