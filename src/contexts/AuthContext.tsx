@@ -101,7 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // SIGNED_OUT
         if (event === "SIGNED_OUT") {
-          console.log("[Auth] User signed out");
+          console.warn("[Auth] ⚠️ SIGNED_OUT event received!");
+          console.warn("[Auth] ⚠️ This will trigger storage removeItem and clear session");
+          console.warn("[Auth] ⚠️ If unexpected, check: token expiry, manual signOut, or API error");
           setSession(null);
           setUser(null);
           setIsLoading(false);
