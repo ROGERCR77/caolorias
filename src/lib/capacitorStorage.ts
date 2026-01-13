@@ -67,9 +67,19 @@ export const capacitorStorage = {
   removeItem: async (key: string): Promise<void> => {
     try {
       if (Capacitor.isNativePlatform()) {
-        console.log(`[Storage] removeItem called for key: "${key}"`);
+        // ALERTA: removeItem está sendo chamado - isso pode indicar logout ou sessão inválida
+        console.warn(`[Storage] ⚠️ removeItem called for key: "${key}"`);
+        console.warn(`[Storage] ⚠️ This usually means: SIGNED_OUT event or invalid session`);
+        
+        // Capturar stack trace para debug
+        try {
+          throw new Error('removeItem stack trace');
+        } catch (e) {
+          console.log(`[Storage] removeItem called from:`, (e as Error).stack?.split('\n').slice(1, 4).join('\n'));
+        }
+        
         await Preferences.remove({ key });
-        console.log(`[Storage] removeItem "${key}": SUCCESS`);
+        console.log(`[Storage] removeItem "${key}": COMPLETED`);
       } else {
         localStorage.removeItem(key);
       }
