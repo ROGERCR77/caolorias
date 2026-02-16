@@ -60,6 +60,27 @@ Deno.serve(async (req) => {
     const result: Record<string, unknown[]> = {};
     const errors: string[] = [];
 
+    // Export auth users (paginated)
+    let authUsers: unknown[] = [];
+    try {
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) {
+          errors.push(`auth_users: ${error.message}`);
+          break;
+        }
+        if (!users || users.length === 0) break;
+        authUsers = authUsers.concat(users);
+        if (users.length < perPage) break;
+        page++;
+      }
+    } catch (e) {
+      errors.push(`auth_users: ${e.message}`);
+    }
+
+    // Export all public tables (paginated)
     await Promise.all(
       TABLES.map(async (table) => {
         try {
@@ -91,10 +112,12 @@ Deno.serve(async (req) => {
     const exportData = {
       exported_at: new Date().toISOString(),
       total_tables: TABLES.length,
+      total_auth_users: authUsers.length,
       summary: Object.fromEntries(
         Object.entries(result).map(([k, v]) => [k, (v as unknown[]).length])
       ),
       errors: errors.length > 0 ? errors : undefined,
+      auth_users: authUsers,
       data: result,
     };
 
