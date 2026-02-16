@@ -8,7 +8,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Extract project ref from URL for consistent storage key
-const projectRef = SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase/)?.[1] || 'tcriouzorxknubqqnvyj';
+const projectRef = SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase/)?.[1] || 'pduddriicbprkflkuyjk';
 const STORAGE_KEY = `sb-${projectRef}-auth-token`;
 
 // CORREÇÃO CRÍTICA: Criar o client de forma lazy para garantir que a migração já rodou

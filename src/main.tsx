@@ -34,7 +34,7 @@ async function bootstrap() {
       }
       
       // Verificar a key primária explicitamente
-      const primaryKey = `sb-tcriouzorxknubqqnvyj-auth-token`;
+      const primaryKey = `sb-pduddriicbprkflkuyjk-auth-token`;
       if (!authKeys.includes(primaryKey)) {
         const { value } = await Preferences.get({ key: primaryKey });
         console.log(`[Boot] Primary key "${primaryKey}": ${value ? `EXISTS (${value.length} chars)` : 'NOT FOUND'}`);

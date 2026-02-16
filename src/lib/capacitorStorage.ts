@@ -93,7 +93,7 @@ export const capacitorStorage = {
 function getSupabaseAuthKey(): string {
   const url = import.meta.env.VITE_SUPABASE_URL || '';
   const match = url.match(/https:\/\/([^.]+)\.supabase\.(co|in)/);
-  const ref = match ? match[1] : 'tcriouzorxknubqqnvyj';
+  const ref = match ? match[1] : 'pduddriicbprkflkuyjk';
   return `sb-${ref}-auth-token`;
 }
 

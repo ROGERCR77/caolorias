@@ -25,7 +25,7 @@ BEGIN
   );
 
   -- Build the edge function URL
-  edge_function_url := 'https://tcriouzorxknubqqnvyj.supabase.co/functions/v1/notify-new-signup';
+  edge_function_url := 'https://pduddriicbprkflkuyjk.supabase.co/functions/v1/notify-new-signup';
 
   -- Call the edge function via pg_net
   PERFORM net.http_post(
