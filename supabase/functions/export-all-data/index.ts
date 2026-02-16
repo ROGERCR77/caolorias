@@ -63,13 +63,24 @@ Deno.serve(async (req) => {
     await Promise.all(
       TABLES.map(async (table) => {
         try {
-          const { data, error } = await supabase.from(table).select("*").limit(10000);
-          if (error) {
-            errors.push(`${table}: ${error.message}`);
-            result[table] = [];
-          } else {
-            result[table] = data || [];
+          let allData: unknown[] = [];
+          let from = 0;
+          const pageSize = 1000;
+          while (true) {
+            const { data: page, error: pageError } = await supabase
+              .from(table)
+              .select("*")
+              .range(from, from + pageSize - 1);
+            if (pageError) {
+              errors.push(`${table}: ${pageError.message}`);
+              break;
+            }
+            if (!page || page.length === 0) break;
+            allData = allData.concat(page);
+            if (page.length < pageSize) break;
+            from += pageSize;
           }
+          result[table] = allData;
         } catch (e) {
           errors.push(`${table}: ${e.message}`);
           result[table] = [];
