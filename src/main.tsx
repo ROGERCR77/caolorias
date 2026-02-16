@@ -1,7 +1,11 @@
 import { createRoot } from "react-dom/client";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
+import { initSentry } from "./lib/sentry";
 import "./index.css";
+
+// Initialize Sentry before anything else
+initSentry();
 
 // ========================================
 // BUILD MARKER - Para confirmar versão

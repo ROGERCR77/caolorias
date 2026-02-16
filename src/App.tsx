@@ -11,6 +11,7 @@ import { DataProvider } from "@/contexts/DataContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Loader2 } from "lucide-react";
+import { SentryReact } from "@/lib/sentry";
 
 import { ProtectedVetRoute } from "@/components/ProtectedVetRoute";
 import { NativeNavigationProvider } from "@/components/app/NativeNavigationProvider";
@@ -180,4 +181,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default SentryReact.withProfiler(App);
