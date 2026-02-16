@@ -119,22 +119,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listener para quando o app volta do background (iOS/Android)
     if (Capacitor.isNativePlatform()) {
-      CapApp.addListener('appStateChange', async ({ isActive }) => {
-        if (!isActive) return;
-        console.log('[Auth] App became active, refreshing session...');
+      (async () => {
         try {
-          const { data, error } = await supabase.auth.refreshSession();
-          if (error) {
-            console.error('[Auth] Error refreshing session on resume:', error);
-          } else if (data.session) {
-            console.log('[Auth] Session refreshed successfully on resume');
-          }
+          appListenerHandle = await CapApp.addListener('appStateChange', async ({ isActive }) => {
+            if (!isActive) return;
+            console.log('[Auth] App became active, refreshing session...');
+            try {
+              const { data, error } = await supabase.auth.refreshSession();
+              if (error) {
+                console.error('[Auth] Error refreshing session on resume:', error);
+              } else if (data.session) {
+                console.log('[Auth] Session refreshed successfully on resume');
+              }
+            } catch (error) {
+              console.error('[Auth] Error in refresh on resume:', error);
+            }
+          });
         } catch (error) {
-          console.error('[Auth] Error in refresh on resume:', error);
+          console.error('[Auth] Error setting up appStateChange listener:', error);
         }
-      }).then((handle) => {
-        appListenerHandle = handle;
-      });
+      })();
     }
 
     // REMOVIDO: getSession() que setava isLoading=false prematuramente

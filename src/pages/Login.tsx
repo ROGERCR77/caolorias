@@ -66,13 +66,6 @@ const Login = () => {
         });
         navigate("/app/hoje");
         return;
-
-        toast({
-          title: mode === "vet" ? "Bem-vindo, Doutor(a)! 🩺" : "Bem-vindo de volta! 🐕",
-          description: "Login realizado com sucesso.",
-        });
-        
-        navigate(mode === "vet" ? "/vet/dashboard" : "/app/hoje");
       }
     } catch (error: any) {
       toast({

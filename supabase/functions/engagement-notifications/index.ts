@@ -1,10 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const ALLOWED_ORIGINS = ['https://pduddriicbprkflkuyjk.supabase.co', 'capacitor://localhost', 'http://localhost', 'http://localhost:8080'];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+  };
+}
+
+const MAX_BODY_SIZE = 100 * 1024; // 100KB
+
+async function parseBody(req: Request) {
+  const body = await req.text();
+  if (body.length > MAX_BODY_SIZE) {
+    throw new Error('Request body too large');
+  }
+  return JSON.parse(body);
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 interface Notification {
   user_id: string;
@@ -29,7 +55,7 @@ async function checkMealNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastMeal } = await supabase
       .from('meals')
@@ -41,7 +67,7 @@ async function checkMealNotifications(
 
     if (lastMeal) {
       const daysSinceMeal = Math.floor((today.getTime() - new Date(lastMeal.date_time).getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysSinceMeal >= 2 && daysSinceMeal < 7) {
         notifications.push({
           user_id,
@@ -59,7 +85,7 @@ async function checkMealNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -69,7 +95,7 @@ async function checkWeightNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastWeight } = await supabase
       .from('weight_logs')
@@ -81,7 +107,7 @@ async function checkWeightNotifications(
 
     if (lastWeight) {
       const daysSinceWeight = Math.floor((today.getTime() - new Date(lastWeight.date).getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysSinceWeight >= 7 && daysSinceWeight < 14) {
         notifications.push({
           user_id,
@@ -99,7 +125,7 @@ async function checkWeightNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -109,19 +135,19 @@ async function checkHealthRecordNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   const typeEmojis: Record<string, string> = {
     vacina: '💉',
     vermifugo: '💊',
     antipulgas: '🐜'
   };
-  
+
   const typeNames: Record<string, string> = {
     vacina: 'Vacina',
     vermifugo: 'Vermífugo',
     antipulgas: 'Antipulgas'
   };
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: healthRecords } = await supabase
       .from('health_records')
@@ -133,13 +159,13 @@ async function checkHealthRecordNotifications(
     if (healthRecords) {
       for (const record of healthRecords) {
         if (!record.next_due_at) continue;
-        
+
         const dueDate = new Date(record.next_due_at);
         const daysUntilDue = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         const emoji = typeEmojis[record.type] || '📋';
         const typeName = typeNames[record.type] || record.type;
-        
+
         if (daysUntilDue === 7) {
           notifications.push({
             user_id,
@@ -172,7 +198,7 @@ async function checkHealthRecordNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -183,7 +209,7 @@ async function checkPoopNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: recentPoops } = await supabase
       .from('poop_logs')
@@ -194,12 +220,12 @@ async function checkPoopNotifications(
 
     if (recentPoops && recentPoops.length >= 2) {
       // Check for persistent issues
-      const abnormalTextures = recentPoops.filter(p => 
+      const abnormalTextures = recentPoops.filter(p =>
         p.texture === 'mole' || p.texture === 'liquida' || p.texture === 'muito_dura'
       );
-      
+
       const hasBloodOrMucus = recentPoops.some(p => p.has_blood || p.has_mucus);
-      
+
       if (abnormalTextures.length >= 2) {
         notifications.push({
           user_id,
@@ -208,7 +234,7 @@ async function checkPoopNotifications(
           category: 'digestive'
         });
       }
-      
+
       if (hasBloodOrMucus) {
         notifications.push({
           user_id,
@@ -219,7 +245,7 @@ async function checkPoopNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -230,7 +256,7 @@ async function checkSymptomNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: recentSymptoms } = await supabase
       .from('health_symptoms')
@@ -241,7 +267,7 @@ async function checkSymptomNotifications(
 
     if (recentSymptoms && recentSymptoms.length >= 2) {
       const severeSymptoms = recentSymptoms.filter(s => s.severity === 'alto');
-      
+
       if (severeSymptoms.length >= 1) {
         notifications.push({
           user_id,
@@ -252,7 +278,7 @@ async function checkSymptomNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -263,7 +289,7 @@ async function checkEnergyNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: recentEnergy } = await supabase
       .from('energy_logs')
@@ -274,7 +300,7 @@ async function checkEnergyNotifications(
 
     if (recentEnergy && recentEnergy.length >= 3) {
       const lowEnergyDays = recentEnergy.filter(e => e.energy_level === 'muito_quieto');
-      
+
       if (lowEnergyDays.length >= 3) {
         notifications.push({
           user_id,
@@ -285,7 +311,7 @@ async function checkEnergyNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -295,7 +321,7 @@ async function checkActivityNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: lastActivity } = await supabase
       .from('activity_logs')
@@ -307,7 +333,7 @@ async function checkActivityNotifications(
 
     if (lastActivity) {
       const daysSinceActivity = Math.floor((today.getTime() - new Date(lastActivity.logged_at).getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysSinceActivity >= 3 && daysSinceActivity < 7) {
         notifications.push({
           user_id,
@@ -318,7 +344,7 @@ async function checkActivityNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -328,7 +354,7 @@ async function checkDietaryTransitionNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     const { data: activeTransition } = await supabase
       .from('dietary_transitions')
@@ -349,7 +375,7 @@ async function checkDietaryTransitionNotifications(
 
       if (!todayLog) {
         const naturalPercent = Math.min(100, Math.round((activeTransition.current_day / activeTransition.total_days) * 100));
-        
+
         notifications.push({
           user_id,
           title: '🔄 Transição alimentar',
@@ -359,7 +385,7 @@ async function checkDietaryTransitionNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -370,14 +396,14 @@ async function checkBirthdayNotifications(
   const notifications: Notification[] = [];
   const todayMonth = today.getMonth() + 1;
   const todayDay = today.getDate();
-  
+
   for (const { user_id, dog_name, birth_date } of userDogs) {
     if (!birth_date) continue;
-    
+
     const birthDateObj = new Date(birth_date);
     const birthMonth = birthDateObj.getMonth() + 1;
     const birthDay = birthDateObj.getDate();
-    
+
     if (birthMonth === todayMonth && birthDay === todayDay) {
       const age = today.getFullYear() - birthDateObj.getFullYear();
       notifications.push({
@@ -388,7 +414,7 @@ async function checkBirthdayNotifications(
       });
     }
   }
-  
+
   return notifications;
 }
 
@@ -398,7 +424,7 @@ async function checkStreakNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_name } of userDogs) {
     const { data: streak } = await supabase
       .from('user_streaks')
@@ -409,7 +435,7 @@ async function checkStreakNotifications(
     if (streak && streak.current_streak >= 3 && streak.last_activity_date) {
       const lastActivity = new Date(streak.last_activity_date);
       const daysSinceActivity = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysSinceActivity === 1) {
         notifications.push({
           user_id,
@@ -420,7 +446,7 @@ async function checkStreakNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -430,21 +456,21 @@ async function checkPuppyTransitionNotifications(
   today: Date
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
-  
+
   for (const { user_id, dog_id, dog_name, birth_date, is_puppy } of userDogs) {
     if (!is_puppy || !birth_date) continue;
-    
+
     const birthDateObj = new Date(birth_date);
-    const ageInMonths = (today.getFullYear() - birthDateObj.getFullYear()) * 12 + 
+    const ageInMonths = (today.getFullYear() - birthDateObj.getFullYear()) * 12 +
                         (today.getMonth() - birthDateObj.getMonth());
-    
+
     // Check if puppy is turning 12 months (within 7 days)
     if (ageInMonths >= 11 && ageInMonths <= 12) {
       const daysUntil12Months = Math.round(
-        (new Date(birthDateObj.getFullYear() + 1, birthDateObj.getMonth(), birthDateObj.getDate()).getTime() - today.getTime()) 
+        (new Date(birthDateObj.getFullYear() + 1, birthDateObj.getMonth(), birthDateObj.getDate()).getTime() - today.getTime())
         / (1000 * 60 * 60 * 24)
       );
-      
+
       if (daysUntil12Months === 7) {
         notifications.push({
           user_id,
@@ -459,7 +485,7 @@ async function checkPuppyTransitionNotifications(
           message: `${dog_name} completou 12 meses! Atualize o perfil para "adulto" e recalcule a meta alimentar.`,
           category: 'puppy_transition'
         });
-        
+
         // Auto-update dog to not be a puppy anymore
         await supabase
           .from('dogs')
@@ -468,7 +494,7 @@ async function checkPuppyTransitionNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -478,9 +504,9 @@ async function checkNoDogNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   const oneDayAgo = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  
+
   console.log('🐕 Checking for users without dogs...');
-  
+
   // Get all profiles created more than 24h ago
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
@@ -498,7 +524,7 @@ async function checkNoDogNotifications(
       .from('dogs')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', profile.user_id);
-      
+
     if (countError) {
       console.error('Error checking dogs for user:', profile.user_id, countError);
       continue;
@@ -508,9 +534,9 @@ async function checkNoDogNotifications(
       const daysSinceSignup = Math.floor(
         (today.getTime() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)
       );
-      
+
       console.log(`📌 User ${profile.name} (${profile.user_id}) has no dog - ${daysSinceSignup} days since signup`);
-      
+
       notifications.push({
         user_id: profile.user_id,
         title: '🐕 Falta pouco!',
@@ -519,7 +545,7 @@ async function checkNoDogNotifications(
       });
     }
   }
-  
+
   console.log(`🐕 Found ${notifications.length} users without dogs`);
   return notifications;
 }
@@ -531,7 +557,7 @@ async function checkCalorieNotifications(
 ): Promise<Notification[]> {
   const notifications: Notification[] = [];
   const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
-  
+
   for (const { user_id, dog_id, dog_name } of userDogs) {
     // Get dog's calorie goal
     const { data: dog } = await supabase
@@ -578,7 +604,7 @@ async function checkCalorieNotifications(
       }
     }
   }
-  
+
   return notifications;
 }
 
@@ -586,10 +612,21 @@ async function checkCalorieNotifications(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
+    // Security: Validate cron secret
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const requestSecret = req.headers.get('x-cron-secret');
+
+    if (!cronSecret || requestSecret !== cronSecret) {
+      console.warn('Unauthorized request - invalid or missing cron secret');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
+      });
+    }
+
     const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
     const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -599,7 +636,7 @@ serve(async (req) => {
       console.error('Missing OneSignal credentials');
       return new Response(
         JSON.stringify({ error: 'OneSignal not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -636,7 +673,7 @@ serve(async (req) => {
     // Create unique user-dog pairs (first dog per user for some notifications)
     const userDogs: UserDogData[] = [];
     const seenUsers = new Set<string>();
-    
+
     tutorDogs.forEach(dog => {
       if (!seenUsers.has(dog.user_id)) {
         userDogs.push({
@@ -726,7 +763,7 @@ serve(async (req) => {
 
     for (const notification of notificationsToSend) {
       try {
-        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+        const response = await fetchWithTimeout('https://onesignal.com/api/v1/notifications', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -747,7 +784,7 @@ serve(async (req) => {
         });
 
         const result = await response.json();
-        
+
         if (response.ok) {
           sentCount++;
           console.log(`✅ [${notification.category}] Sent to ${notification.user_id}`);
@@ -766,8 +803,8 @@ serve(async (req) => {
     console.log(`🎯 Completed: ${sentCount}/${notificationsToSend.length} sent`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         tutors_found: tutorUserIds.size,
         users_checked: userDogs.length,
         notifications_found: notificationsToSend.length,
@@ -775,7 +812,7 @@ serve(async (req) => {
         by_category: categoryCounts,
         errors: errors.length > 0 ? errors : undefined
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -783,7 +820,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

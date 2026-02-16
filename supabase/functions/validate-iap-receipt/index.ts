@@ -1,25 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-};
+const ALLOWED_ORIGINS = ['https://pduddriicbprkflkuyjk.supabase.co', 'capacitor://localhost', 'http://localhost', 'http://localhost:8080'];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  };
+}
+
+const MAX_BODY_SIZE = 100 * 1024; // 100KB
+
+async function parseBody(req: Request) {
+  const body = await req.text();
+  if (body.length > MAX_BODY_SIZE) {
+    throw new Error('Request body too large');
+  }
+  return JSON.parse(body);
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // Helper para respostas 200 (sucesso ou erro de negócio)
-function ok(body: unknown) {
+function ok(body: unknown, req: Request) {
   return new Response(JSON.stringify(body), {
     status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
   });
 }
 
 // Helper para 401 (ÚNICO caso de non-2xx - JWT inválido)
-function unauthorized(msg = 'Invalid user token') {
+function unauthorized(msg = 'Invalid user token', req: Request) {
   return new Response(JSON.stringify({ success: false, error: msg }), {
     status: 401,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' }
   });
 }
 
@@ -51,7 +77,7 @@ interface AppleValidationResponse {
 async function validateAppleReceipt(receiptData: string, sharedSecret: string): Promise<AppleValidationResponse> {
   const productionUrl = 'https://buy.itunes.apple.com/verifyReceipt';
   const sandboxUrl = 'https://sandbox.itunes.apple.com/verifyReceipt';
-  
+
   const payload = {
     'receipt-data': receiptData,
     'password': sharedSecret,
@@ -59,21 +85,21 @@ async function validateAppleReceipt(receiptData: string, sharedSecret: string): 
   };
 
   console.log('Validating receipt with Apple production server...');
-  
+
   // Try production first
-  let response = await fetch(productionUrl, {
+  let response = await fetchWithTimeout(productionUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  
+
   let result: AppleValidationResponse = await response.json();
   console.log('Apple production response status:', result.status);
-  
+
   // Status 21007 means receipt is from sandbox, redirect to sandbox server
   if (result.status === 21007) {
     console.log('Receipt is from sandbox, redirecting to sandbox server...');
-    response = await fetch(sandboxUrl, {
+    response = await fetchWithTimeout(sandboxUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -81,7 +107,7 @@ async function validateAppleReceipt(receiptData: string, sharedSecret: string): 
     result = await response.json();
     console.log('Apple sandbox response status:', result.status);
   }
-  
+
   return result;
 }
 
@@ -99,14 +125,14 @@ function getAppleErrorMessage(status: number): string {
     21009: 'Internal data access error.',
     21010: 'The user account cannot be found or has been deleted.',
   };
-  
+
   return errorMessages[status] || `Unknown Apple error (status: ${status})`;
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -114,7 +140,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header provided');
-      return unauthorized('Authorization header required');
+      return unauthorized('Authorization header required', req);
     }
 
     // Initialize Supabase client with service role for updating subscriptions
@@ -128,19 +154,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    
+
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
-    
+
     if (userError || !user) {
       console.error('Error getting user:', userError);
-      return unauthorized('Invalid user token');
+      return unauthorized('Invalid user token', req);
     }
 
     // Parse request body
-    const { receipt_data, platform, product_id }: IAPReceiptRequest = await req.json();
+    const { receipt_data, platform, product_id }: IAPReceiptRequest = await parseBody(req);
 
     if (!receipt_data || !platform) {
-      return ok({ success: false, error: 'receipt_data and platform are required' });
+      return ok({ success: false, error: 'receipt_data and platform are required' }, req);
     }
 
     console.log(`Validating ${platform} receipt for user ${user.id}, product: ${product_id || 'not specified'}`);
@@ -153,14 +179,14 @@ serve(async (req) => {
 
     if (platform === 'apple') {
       const appleSharedSecret = Deno.env.get('APPLE_SHARED_SECRET');
-      
+
       if (!appleSharedSecret) {
         console.error('APPLE_SHARED_SECRET not configured');
-        return ok({ success: false, error: 'Apple shared secret not configured' });
+        return ok({ success: false, error: 'Apple shared secret not configured' }, req);
       }
 
       const appleResult = await validateAppleReceipt(receipt_data, appleSharedSecret);
-      
+
       console.log('Apple validation result:', {
         status: appleResult.status,
         environment: appleResult.environment,
@@ -171,48 +197,48 @@ serve(async (req) => {
       // Status 0 = valid, Status 21006 = valid but expired
       if (appleResult.status === 0 || appleResult.status === 21006) {
         const latestReceiptInfo = appleResult.latest_receipt_info;
-        
+
         if (latestReceiptInfo && latestReceiptInfo.length > 0) {
           // Sort by expires_date_ms descending to get the most recent transaction
           const sortedReceipts = [...latestReceiptInfo].sort(
             (a, b) => parseInt(b.expires_date_ms) - parseInt(a.expires_date_ms)
           );
-          
+
           const latestTransaction = sortedReceipts[0];
-          
+
           console.log('Latest transaction:', {
             product_id: latestTransaction.product_id,
             expires_date_ms: latestTransaction.expires_date_ms,
             transaction_id: latestTransaction.transaction_id
           });
-          
+
           const expiresDateMs = parseInt(latestTransaction.expires_date_ms);
           const purchaseDateMs = parseInt(latestTransaction.purchase_date_ms);
-          
+
           periodEnd = new Date(expiresDateMs);
           periodStart = new Date(purchaseDateMs);
-          
+
           // Check if subscription is currently active
           isValid = periodEnd > new Date();
           planSource = 'appstore';
           environment = appleResult.environment || 'Production';
-          
+
           console.log(`Subscription status: ${isValid ? 'ACTIVE' : 'EXPIRED'}, expires: ${periodEnd.toISOString()}, environment: ${environment}`);
         } else {
           console.error('No receipt info found in Apple response');
-          return ok({ success: false, valid: false, error: 'No subscription information found in receipt' });
+          return ok({ success: false, valid: false, error: 'No subscription information found in receipt' }, req);
         }
       } else {
         const errorMessage = getAppleErrorMessage(appleResult.status);
         console.error(`Apple validation failed: ${errorMessage}`);
-        return ok({ success: false, valid: false, error: errorMessage, apple_status: appleResult.status });
+        return ok({ success: false, valid: false, error: errorMessage, apple_status: appleResult.status }, req);
       }
     } else if (platform === 'google') {
       // TODO: Implement Google Play validation
       console.error('Google Play validation not yet implemented');
-      return ok({ success: false, error: 'Google Play validation not yet implemented' });
+      return ok({ success: false, error: 'Google Play validation not yet implemented' }, req);
     } else {
-      return ok({ success: false, error: 'Invalid platform. Must be "apple" or "google"' });
+      return ok({ success: false, error: 'Invalid platform. Must be "apple" or "google"' }, req);
     }
 
     // Update user subscription based on validation result using UPSERT
@@ -238,12 +264,12 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error('Error upserting subscription:', upsertError);
-      return ok({ success: false, error: 'Failed to update subscription' });
+      return ok({ success: false, error: 'Failed to update subscription' }, req);
     }
 
     console.log(`Successfully updated subscription for user ${user.id}: ${planType} (${subscriptionStatus}) via ${planSource}`);
 
-    return ok({ 
+    return ok({
       success: true,
       valid: isValid,
       environment,
@@ -254,10 +280,10 @@ serve(async (req) => {
         current_period_start: subscription.current_period_start,
         current_period_end: subscription.current_period_end,
       }
-    });
+    }, req);
 
   } catch (error) {
     console.error('Unexpected error:', error);
-    return ok({ success: false, error: 'Internal error' });
+    return ok({ success: false, error: 'Internal error' }, req);
   }
 });

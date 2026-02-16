@@ -54,16 +54,30 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         return;
       }
 
-      try {
-        const { data: profile, error } = await supabase
+      const fetchOnboardingProfile = async (retry = false): Promise<{ data: any; error: any }> => {
+        const result = await supabase
           .from("profiles")
           .select("has_seen_onboarding")
           .eq("user_id", user.id)
           .maybeSingle();
+        if (result.error && !retry) {
+          console.warn("Error checking onboarding status, retrying once...", result.error);
+          await new Promise(r => setTimeout(r, 1000));
+          return fetchOnboardingProfile(true);
+        }
+        return result;
+      };
+
+      try {
+        const { data: profile, error } = await fetchOnboardingProfile();
 
         if (error) {
-          console.error("Error checking onboarding status:", error);
-          // If there's an error, assume they've seen it to not block the app
+          console.error("Error checking onboarding status after retry:", error, {
+            userId: user.id,
+            errorCode: error.code,
+            errorDetails: error.details,
+          });
+          // If there's an error after retry, assume they've seen it to not block the app
           setHasSeenOnboarding(true);
           setLocalOnboardingSeen(user.id);
         } else if (profile) {

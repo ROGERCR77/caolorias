@@ -122,8 +122,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           console.log("IAP: Got iOS receipt from native layer, length:", receiptData.length);
         } else {
           // Last resort: try to get from the store's localReceipts
-          // @ts-ignore - cordova-plugin-purchase
-          const { store } = CdvPurchase;
+          if (typeof (window as any).CdvPurchase === 'undefined') {
+            throw new Error("Não foi possível obter o receipt da App Store. Plugin não disponível.");
+          }
+          const { store } = (window as any).CdvPurchase;
           const localReceipts = store.localReceipts || [];
           const iosReceipt = localReceipts.find((r: any) => r.platform === "ios-appstore");
           
@@ -252,8 +254,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     const retryDelay = 500;
 
     while (retries < maxRetries) {
-      // @ts-ignore - cordova-plugin-purchase
-      if (typeof CdvPurchase !== "undefined") {
+      if (typeof (window as any).CdvPurchase !== "undefined") {
         break;
       }
       console.log(`IAP: Waiting for CdvPurchase plugin... attempt ${retries + 1}/${maxRetries}`);
@@ -261,8 +262,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       retries++;
     }
 
-    // @ts-ignore - cordova-plugin-purchase
-    if (typeof CdvPurchase === "undefined") {
+    if (typeof (window as any).CdvPurchase === "undefined") {
       console.error("IAP: CdvPurchase plugin not available after retries");
       setState(prev => ({ 
         ...prev, 
@@ -273,7 +273,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // @ts-ignore - cordova-plugin-purchase
+      const CdvPurchase = (window as any).CdvPurchase;
       const { store, Platform, ProductType } = CdvPurchase;
 
       if (!store) {
@@ -470,8 +470,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       console.log("IAP: Starting purchase for product:", selectedProductId);
 
-      // @ts-ignore - cordova-plugin-purchase
-      if (typeof CdvPurchase === "undefined") {
+      if (typeof (window as any).CdvPurchase === "undefined") {
         console.error("IAP: CdvPurchase not available");
         toast({
           title: "Sistema indisponível",
@@ -481,8 +480,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // @ts-ignore - cordova-plugin-purchase
-      const { store } = CdvPurchase;
+      const { store } = (window as any).CdvPurchase;
       
       console.log("IAP: Registered products:", store.products.map((p: any) => ({
         id: p.id,
@@ -543,8 +541,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       console.log("IAP: Restoring purchases...");
 
-      // @ts-ignore - cordova-plugin-purchase
-      if (typeof CdvPurchase === "undefined") {
+      if (typeof (window as any).CdvPurchase === "undefined") {
+        console.error("IAP: CdvPurchase plugin not available");
         toast({
           title: "Indisponível",
           description: "O sistema de compras não está disponível no momento.",
@@ -552,8 +550,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // @ts-ignore - cordova-plugin-purchase
-      const { store } = CdvPurchase;
+      const { store } = (window as any).CdvPurchase;
       await store.restorePurchases();
 
       await refreshSubscription();

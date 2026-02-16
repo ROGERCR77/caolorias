@@ -1,10 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
-};
+const ALLOWED_ORIGINS = ['https://pduddriicbprkflkuyjk.supabase.co', 'capacitor://localhost', 'http://localhost', 'http://localhost:8080'];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+  };
+}
+
+const MAX_BODY_SIZE = 100 * 1024; // 100KB
+
+async function parseBody(req: Request) {
+  const body = await req.text();
+  if (body.length > MAX_BODY_SIZE) {
+    throw new Error('Request body too large');
+  }
+  return JSON.parse(body);
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // Convert HH:MM to total minutes
 function hhmmToMinutes(hhmm: string): number {
@@ -51,7 +77,7 @@ function getSaoPauloDateTime() {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -59,11 +85,11 @@ serve(async (req) => {
     const cronSecret = Deno.env.get('CRON_SECRET');
     const requestSecret = req.headers.get('x-cron-secret');
 
-    if (cronSecret && requestSecret !== cronSecret) {
+    if (!cronSecret || requestSecret !== cronSecret) {
       console.warn('🚫 Unauthorized request - invalid cron secret');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -76,12 +102,12 @@ serve(async (req) => {
       console.error('Missing OneSignal credentials');
       return new Response(
         JSON.stringify({ error: 'OneSignal not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
+
     // Get São Paulo timezone date/time
     const { todayDate, currentTime, currentDayOfWeek } = getSaoPauloDateTime();
     const currentMinutes = hhmmToMinutes(currentTime);
@@ -174,7 +200,7 @@ serve(async (req) => {
         // Use custom message if available, otherwise default
         const message = reminder.message || getDefaultMessage(reminder.type, dogName);
 
-        const response = await fetch('https://onesignal.com/api/v1/notifications', {
+        const response = await fetchWithTimeout('https://onesignal.com/api/v1/notifications', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -234,7 +260,7 @@ serve(async (req) => {
         reminders_skipped: skippedCount,
         errors: errors.length > 0 ? errors : undefined
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -242,7 +268,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

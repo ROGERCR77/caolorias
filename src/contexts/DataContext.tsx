@@ -298,9 +298,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Fetch user data in parallel
       const [dogsRes, foodsRes, mealsRes, weightRes, plansRes] = await Promise.all([
         supabase.from("dogs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
-        supabase.from("foods").select("*").eq("user_id", user.id).order("name", { ascending: true }),
-        supabase.from("meals").select("*, meal_items(*)").eq("user_id", user.id).order("date_time", { ascending: false }),
-        supabase.from("weight_logs").select("*").eq("user_id", user.id).order("date", { ascending: true }),
+        supabase.from("foods").select("*").eq("user_id", user.id).order("name", { ascending: true }).limit(1000),
+        supabase.from("meals").select("*, meal_items(*)").eq("user_id", user.id).order("date_time", { ascending: false }).limit(500),
+        supabase.from("weight_logs").select("*").eq("user_id", user.id).order("date", { ascending: true }).limit(365),
         supabase.from("meal_plans").select("*, meal_plan_items(*)").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
 
@@ -378,10 +378,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Dog operations
   const addDog = async (dog: Omit<Dog, "id" | "created_at">) => {
+    if (!user) throw new Error('User not authenticated');
     const { data, error } = await supabase
       .from("dogs")
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         name: dog.name,
         breed: dog.breed,
         birth_date: dog.birth_date,
@@ -448,10 +449,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Food operations
   const addFood = async (food: Omit<Food, "id" | "created_at">) => {
+    if (!user) throw new Error('User not authenticated');
     const { data, error } = await supabase
       .from("foods")
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         name: food.name,
         category: food.category,
         kcal_per_100g: food.kcal_per_100g,
@@ -499,11 +501,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     meal: Omit<Meal, "id" | "created_at">,
     items: { foodId: string; grams: number }[]
   ) => {
+    if (!user) throw new Error('User not authenticated');
     // Insert meal
     const { data: mealData, error: mealError } = await supabase
       .from("meals")
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         dog_id: meal.dog_id,
         date_time: meal.date_time,
         title: meal.title,
@@ -565,10 +568,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Weight operations
   const addWeightLog = async (log: Omit<WeightLog, "id" | "created_at">) => {
+    if (!user) throw new Error('User not authenticated');
     const { data, error } = await supabase
       .from("weight_logs")
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         dog_id: log.dog_id,
         date: log.date,
         weight_kg: log.weight_kg,
@@ -608,11 +612,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .update({ ativo: false })
       .eq("dog_id", plan.dog_id);
 
+    if (!user) throw new Error('User not authenticated');
     // Insert new plan
     const { data: planData, error: planError } = await supabase
       .from("meal_plans")
       .insert({
-        user_id: user!.id,
+        user_id: user.id,
         dog_id: plan.dog_id,
         objetivo: plan.objetivo,
         meta_kcal_dia_snapshot: plan.meta_kcal_dia_snapshot,
