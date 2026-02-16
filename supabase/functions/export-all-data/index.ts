@@ -60,6 +60,55 @@ Deno.serve(async (req) => {
     const result: Record<string, unknown[]> = {};
     const errors: string[] = [];
 
+    // Export storage files from dog-photos bucket
+    let storageFiles: unknown[] = [];
+    try {
+      const { data: folders, error: storageError } = await supabase.storage
+        .from("dog-photos")
+        .list("", { limit: 10000 });
+      if (storageError) {
+        errors.push(`storage_dog_photos: ${storageError.message}`);
+      } else if (folders) {
+        for (const item of folders) {
+          if (!item.metadata || item.id === null) {
+            // It's a folder - list contents
+            const { data: folderFiles } = await supabase.storage
+              .from("dog-photos")
+              .list(item.name, { limit: 10000 });
+            if (folderFiles) {
+              for (const file of folderFiles) {
+                const path = `${item.name}/${file.name}`;
+                const { data: urlData } = supabase.storage.from("dog-photos").getPublicUrl(path);
+                storageFiles.push({
+                  path,
+                  folder: item.name,
+                  name: file.name,
+                  size: file.metadata?.size,
+                  mimetype: file.metadata?.mimetype,
+                  created_at: file.created_at,
+                  public_url: urlData?.publicUrl,
+                });
+              }
+            }
+          } else {
+            // Root-level file
+            const { data: urlData } = supabase.storage.from("dog-photos").getPublicUrl(item.name);
+            storageFiles.push({
+              path: item.name,
+              folder: null,
+              name: item.name,
+              size: item.metadata?.size,
+              mimetype: item.metadata?.mimetype,
+              created_at: item.created_at,
+              public_url: urlData?.publicUrl,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      errors.push(`storage_dog_photos: ${e.message}`);
+    }
+
     // Export auth users (paginated)
     let authUsers: unknown[] = [];
     try {
@@ -113,11 +162,13 @@ Deno.serve(async (req) => {
       exported_at: new Date().toISOString(),
       total_tables: TABLES.length,
       total_auth_users: authUsers.length,
+      total_storage_files: storageFiles.length,
       summary: Object.fromEntries(
         Object.entries(result).map(([k, v]) => [k, (v as unknown[]).length])
       ),
       errors: errors.length > 0 ? errors : undefined,
       auth_users: authUsers,
+      storage_dog_photos: storageFiles,
       data: result,
     };
 
