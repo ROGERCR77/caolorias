@@ -46,6 +46,7 @@ const DataPrivacy = lazy(() => import("./pages/app/DataPrivacy"));
 const References = lazy(() => import("./pages/app/References"));
 const Achievements = lazy(() => import("./pages/app/Achievements"));
 const ShoppingList = lazy(() => import("./pages/app/ShoppingList"));
+const FoodComparator = lazy(() => import("./pages/app/FoodComparator"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Vet pages
@@ -161,6 +162,7 @@ const App = () => {
                       <Route path="/app/referencias" element={<ProtectedRoute><References /></ProtectedRoute>} />
                       <Route path="/app/conquistas" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
                       <Route path="/app/lista-compras" element={<ProtectedRoute><ShoppingList /></ProtectedRoute>} />
+                      <Route path="/app/comparador" element={<ProtectedRoute><FoodComparator /></ProtectedRoute>} />
 
                       {/* Redirect /app to /app/hoje */}
                       <Route path="/app" element={<Navigate to="/app/hoje" replace />} />

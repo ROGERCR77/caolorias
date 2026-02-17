@@ -10,7 +10,7 @@ initSentry();
 // ========================================
 // BUILD MARKER - Para confirmar versão
 // ========================================
-const BUILD_MARKER = "AUTH_PERSIST_FIX_V2_2025_01_13";
+const BUILD_MARKER = "SUPABASE_MIGRATION_V1_2_0_2026_02_16";
 
 async function bootstrap() {
   const isNative = Capacitor.isNativePlatform();

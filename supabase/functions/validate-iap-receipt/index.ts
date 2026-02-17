@@ -241,10 +241,14 @@ serve(async (req) => {
       return ok({ success: false, error: 'Invalid platform. Must be "apple" or "google"' }, req);
     }
 
+    // Both monthly and annual products map to premium plan
+    const VALID_PREMIUM_PRODUCTS = ['caolorias_premium_1month', 'caolorias_premium_1year'];
+
     // Update user subscription based on validation result using UPSERT
     const now = new Date();
     const subscriptionStatus = isValid ? 'active' : 'expired';
-    const planType = isValid ? 'premium' : 'free';
+    // Any valid premium product maps to 'premium' plan type
+    const planType = isValid && (!product_id || VALID_PREMIUM_PRODUCTS.includes(product_id)) ? 'premium' : (isValid ? 'premium' : 'free');
 
     const payload = {
       user_id: user.id,

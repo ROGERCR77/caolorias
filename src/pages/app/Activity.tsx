@@ -13,10 +13,12 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { format, parseISO, isToday, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { 
-  Loader2, Plus, Trash2, Footprints, Timer, Flame, 
-  TrendingUp, Target, Dumbbell
+import {
+  Loader2, Plus, Trash2, Footprints, Timer, Flame,
+  TrendingUp, Target, Dumbbell, BarChart3
 } from "lucide-react";
+import { FeatureGateBlur } from "@/components/app/FeatureGate";
+import { ActivityCharts } from "@/components/app/ActivityCharts";
 import {
   Dialog,
   DialogContent,
@@ -398,6 +400,17 @@ export default function Activity() {
               );
             })
           )}
+        </div>
+
+        {/* Premium Charts */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-primary" />
+            Analise Premium
+          </h3>
+          <FeatureGateBlur feature="activity_recommendations" overlayText="Desbloqueie graficos e recomendacoes de atividade">
+            <ActivityCharts dogId={selectedDogId} />
+          </FeatureGateBlur>
         </div>
 
         {/* Activity Tip */}

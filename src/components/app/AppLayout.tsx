@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, Trophy, ShoppingCart, AlertTriangle, HelpCircle, Shield, Library } from "lucide-react";
+import { Dog, Home, UtensilsCrossed, Apple, Scale, LogOut, User, ClipboardList, BookOpen, Crown, ChefHat, Heart, Syringe, Activity, Leaf, FileText, MoreHorizontal, Settings, History, Trophy, ShoppingCart, AlertTriangle, HelpCircle, Shield, Library, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,8 @@ const moreNavItems = [
   { path: "/app/transicao", label: "Transição Alimentar", icon: Leaf, premium: true },
   { path: "/app/relatorio-vet", label: "Relatório Vet", icon: FileText, premium: true },
   { path: "/app/receitas", label: "Receitas", icon: ChefHat, premium: true },
-  { path: "/app/historico-insights", label: "Histórico IA", icon: History, premium: true },
+  { path: "/app/historico-insights", label: "Historico IA", icon: History, premium: true },
+  { path: "/app/comparador", label: "Comparador", icon: ArrowLeftRight, premium: true },
 ];
 
 const quickActions = [

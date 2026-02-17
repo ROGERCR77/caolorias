@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { DogSelector } from "@/components/app/DogSelector";
@@ -7,16 +7,18 @@ import { HealthQuickCard } from "@/components/app/HealthQuickCard";
 import { WeeklyInsightsCard } from "@/components/app/WeeklyInsightsCard";
 import { StreakCard } from "@/components/app/StreakCard";
 import { VetAppointmentsCard } from "@/components/app/VetAppointmentsCard";
+import { HealthScoreCard } from "@/components/app/HealthScoreCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/lib/supabaseClient";
 import { calculateConsecutiveDays } from "@/lib/insights";
-import { 
-  Plus, Scale, UtensilsCrossed, Dog, TrendingUp, 
-  Target, Info, ChevronRight, Baby
+import {
+  Plus, Scale, UtensilsCrossed, Dog, TrendingUp,
+  Target, Info, ChevronRight, Baby, Crown, AlertTriangle
 } from "lucide-react";
 import { format, isToday, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +27,8 @@ import { calculateAgeInMonths, getSuggestedMealsPerDay } from "@/contexts/DataCo
 const Dashboard = () => {
   const { dogs, meals, weightLogs, selectedDogId, isLoading } = useData();
   const { user } = useAuth();
+  const { planType, daysUntilTrialExpires, isTrialExpired } = useSubscription();
+  const navigate = useNavigate();
   const [longestStreak, setLongestStreak] = useState(0);
 
   const selectedDog = useMemo(() => 
@@ -163,6 +167,36 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Trial Banner */}
+        {planType === "trial" && !isTrialExpired && daysUntilTrialExpires != null && (
+          <button
+            onClick={() => navigate("/app/assinatura")}
+            className="w-full p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 flex items-center gap-3 press-effect"
+          >
+            <Crown className="w-5 h-5 text-warning flex-shrink-0" />
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold">Teste Premium - {daysUntilTrialExpires} dia{daysUntilTrialExpires !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-muted-foreground">Assine para manter acesso total</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
+
+        {/* Trial Expired Banner */}
+        {isTrialExpired && (
+          <button
+            onClick={() => navigate("/app/assinatura")}
+            className="w-full p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-3 press-effect"
+          >
+            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold">Teste Premium expirou</p>
+              <p className="text-xs text-muted-foreground">Assine agora para recuperar acesso</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
+
         {selectedDog && (
           <div className="section-content">
             {/* Quick Stats Row */}
@@ -209,11 +243,14 @@ const Dashboard = () => {
             </div>
 
             {/* Streak Card */}
-            <StreakCard 
-              currentStreak={streak} 
-              longestStreak={longestStreak} 
-              dogName={selectedDog.name} 
+            <StreakCard
+              currentStreak={streak}
+              longestStreak={longestStreak}
+              dogName={selectedDog.name}
             />
+
+            {/* Health Score Card */}
+            <HealthScoreCard dogId={selectedDog.id} />
 
             {/* Health Quick Card */}
             <HealthQuickCard />

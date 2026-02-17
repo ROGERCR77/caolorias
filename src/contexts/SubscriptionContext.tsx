@@ -64,10 +64,15 @@ const PREMIUM_FEATURES = [
   "health_wallet",
   "dietary_transition",
   "all_objectives",
+  "digestive_trends",
+  "smart_shopping",
+  "health_score",
+  "food_comparator",
 ];
 
 const PRODUCT_IDS = {
   PREMIUM_MONTHLY: "caolorias_premium_1month",
+  PREMIUM_YEARLY: "caolorias_premium_1year",
 };
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
@@ -297,6 +302,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       store.register([
         {
           id: PRODUCT_IDS.PREMIUM_MONTHLY,
+          type: ProductType.PAID_SUBSCRIPTION,
+          platform: platformId,
+        },
+        {
+          id: PRODUCT_IDS.PREMIUM_YEARLY,
           type: ProductType.PAID_SUBSCRIPTION,
           platform: platformId,
         },

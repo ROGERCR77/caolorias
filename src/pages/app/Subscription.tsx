@@ -4,16 +4,16 @@ import { AppLayout } from "@/components/app/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Check, Crown, Loader2, RefreshCw, RotateCcw, ExternalLink, AlertCircle } from "lucide-react";
+import { useSubscription, PRODUCT_IDS } from "@/contexts/SubscriptionContext";
+import { Check, Crown, Loader2, RefreshCw, RotateCcw, ExternalLink, AlertCircle, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Subscription = () => {
-  const { 
-    planType, 
+  const {
+    planType,
     planSource,
-    trialEndsAt, 
+    trialEndsAt,
     subscriptionEnd,
     daysUntilTrialExpires,
     isTrialExpired,
@@ -34,6 +34,14 @@ const Subscription = () => {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("annual");
+
+  const monthlyProduct = products.find(p => p.id === PRODUCT_IDS.PREMIUM_MONTHLY);
+  const annualProduct = products.find(p => p.id === PRODUCT_IDS.PREMIUM_YEARLY);
+  const monthlyPrice = monthlyProduct?.price || "R$ 19,90";
+  const annualPrice = annualProduct?.price || "R$ 118,80";
+
+  const neverHadTrial = planType === "free" && !trialEndsAt;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -41,10 +49,13 @@ const Subscription = () => {
     setIsRefreshing(false);
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (plan: "monthly" | "annual") => {
     setIsPurchasing(true);
     try {
-      await startInAppSubscription();
+      const productId = plan === "annual"
+        ? PRODUCT_IDS.PREMIUM_YEARLY
+        : PRODUCT_IDS.PREMIUM_MONTHLY;
+      await startInAppSubscription(productId);
     } finally {
       setIsPurchasing(false);
     }
@@ -75,21 +86,16 @@ const Subscription = () => {
     if (planType === "trial" && !isTrialExpired) {
       return <Badge variant="secondary">Teste Premium</Badge>;
     }
-    return <Badge variant="outline">Grátis</Badge>;
+    return <Badge variant="outline">Gratis</Badge>;
   };
 
   const getPlanSourceText = () => {
     if (!isPremium) return null;
-    
     switch (planSource) {
-      case "appstore":
-        return "Assinatura via App Store";
-      case "playstore":
-        return "Assinatura via Google Play";
-      case "stripe":
-        return "Assinatura via site";
-      default:
-        return "Assinatura ativa";
+      case "appstore": return "Assinatura via App Store";
+      case "playstore": return "Assinatura via Google Play";
+      case "stripe": return "Assinatura via site";
+      default: return "Assinatura ativa";
     }
   };
 
@@ -99,7 +105,7 @@ const Subscription = () => {
       if (subscriptionEnd) {
         return `${sourceText} • Renova em ${format(new Date(subscriptionEnd), "dd 'de' MMMM", { locale: ptBR })}`;
       }
-      return sourceText || "Você é assinante Premium do Cãolorias 🐾";
+      return sourceText || "Voce e assinante Premium do Caolorias";
     }
     if (planType === "trial" && !isTrialExpired && trialEndsAt) {
       return `Teste expira em ${daysUntilTrialExpires} dia${daysUntilTrialExpires !== 1 ? "s" : ""}`;
@@ -107,48 +113,7 @@ const Subscription = () => {
     if (isTrialExpired) {
       return "Seu teste Premium expirou";
     }
-    return "Você está no plano gratuito. Alguns recursos avançados estão bloqueados.";
-  };
-
-  // Get button text based on state
-  const getSubscribeButtonContent = () => {
-    if (isPurchasing) {
-      return (
-        <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Processando...
-        </>
-      );
-    }
-    
-    if (isIAPLoading) {
-      return (
-        <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Carregando planos...
-        </>
-      );
-    }
-    
-    if (!hasProducts && isNativePlatform) {
-      return (
-        <>
-          <AlertCircle className="w-4 h-4 mr-2" />
-          Planos indisponíveis
-        </>
-      );
-    }
-    
-    // Show actual price from loaded products if available
-    const product = products.find(p => p.id === "caolorias_premium_1month");
-    const priceText = product?.price || "R$ 39,90";
-    
-    return (
-      <>
-        <Crown className="w-4 h-4 mr-2" />
-        Assinar Premium - {priceText}/mês
-      </>
-    );
+    return "Voce esta no plano gratuito. Alguns recursos avancados estao bloqueados.";
   };
 
   if (isLoading) {
@@ -161,12 +126,26 @@ const Subscription = () => {
     );
   }
 
+  const PREMIUM_FEATURES = [
+    "Ate 10 caes cadastrados",
+    "Refeicoes ilimitadas",
+    "Historico completo",
+    "Plano alimentar com IA",
+    "Score de Saude",
+    "Comparador de Alimentos",
+    "Tendencias Digestivas",
+    "Lista Inteligente",
+    "Receitas e favoritos",
+    "Exportar PDF",
+    "Relatorio Veterinario",
+  ];
+
   return (
     <AppLayout>
       <div className="page-container page-content">
         <div>
           <h1 className="text-2xl font-bold">Assinatura</h1>
-          <p className="text-muted-foreground">Gerencie seu plano do Cãolorias</p>
+          <p className="text-muted-foreground">Gerencie seu plano do Caolorias</p>
         </div>
 
         {/* Current Plan Card */}
@@ -176,12 +155,7 @@ const Subscription = () => {
               <CardTitle className="flex items-center gap-2">
                 Seu Plano {getPlanBadge()}
               </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
+              <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
             </div>
@@ -193,27 +167,36 @@ const Subscription = () => {
               <div className="p-4 rounded-lg bg-success/10 border border-success/20">
                 <p className="text-sm font-medium text-success-foreground flex items-center gap-2">
                   <Crown className="w-4 h-4 text-warning" />
-                  Você é assinante Premium do Cãolorias 🐾
+                  Voce e assinante Premium do Caolorias
                 </p>
                 {getPlanSourceText() && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getPlanSourceText()}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{getPlanSourceText()}</p>
                 )}
               </div>
             )}
 
-            {/* Trial warning */}
-            {planType === "trial" && !isTrialExpired && daysUntilTrialExpires && daysUntilTrialExpires <= 3 && (
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                <p className="text-sm text-warning-foreground">
-                  ⚠️ Seu teste Premium expira em {daysUntilTrialExpires} dia{daysUntilTrialExpires !== 1 ? "s" : ""}. 
-                  Assine para não perder acesso aos recursos premium!
-                </p>
+            {/* Trial countdown */}
+            {planType === "trial" && !isTrialExpired && daysUntilTrialExpires != null && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <span className="text-xl font-black text-primary">{daysUntilTrialExpires}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {daysUntilTrialExpires <= 3
+                        ? "Seu teste esta acabando!"
+                        : "Teste Premium ativo"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {daysUntilTrialExpires} dia{daysUntilTrialExpires !== 1 ? "s" : ""} restante{daysUntilTrialExpires !== 1 ? "s" : ""}. Assine para nao perder acesso!
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Expired trial message */}
+            {/* Expired trial */}
             {isTrialExpired && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm">
@@ -222,201 +205,148 @@ const Subscription = () => {
               </div>
             )}
 
-            {/* IAP Error message with retry */}
+            {/* IAP Error */}
             {iapError && isNativePlatform && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-destructive mb-2">
                   <AlertCircle className="w-4 h-4 inline mr-1" />
                   {iapError}
                 </p>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRetryLoad}
-                  disabled={isRetrying}
-                >
-                  {isRetrying ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                  )}
+                <Button variant="outline" size="sm" onClick={handleRetryLoad} disabled={isRetrying}>
+                  {isRetrying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                   Tentar novamente
                 </Button>
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {!isPremium && (
-                <Button 
-                  onClick={handleSubscribe} 
-                  className="flex-1"
-                  size="lg"
-                  disabled={isPurchasing || isIAPLoading || (!hasProducts && isNativePlatform)}
-                >
-                  {getSubscribeButtonContent()}
-                </Button>
-              )}
-
-              {isNativePlatform && (
-                <Button 
-                  variant="ghost" 
-                  onClick={handleRestore}
-                  disabled={isRestoring}
-                >
-                  {isRestoring ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                  )}
-                  Restaurar compras
-                </Button>
-              )}
-            </div>
-
-            {/* Products not loaded - show retry button */}
-            {!hasProducts && !isIAPLoading && isNativePlatform && !iapError && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertCircle className="w-4 h-4" />
-                <span>Produtos não carregados.</span>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="p-0 h-auto"
-                  onClick={handleRetryLoad}
-                  disabled={isRetrying}
-                >
-                  {isRetrying ? "Carregando..." : "Tentar novamente"}
-                </Button>
-              </div>
+            {/* Restore purchases */}
+            {isNativePlatform && (
+              <Button variant="ghost" onClick={handleRestore} disabled={isRestoring} className="w-full">
+                {isRestoring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                Restaurar compras
+              </Button>
             )}
           </CardContent>
         </Card>
 
-        {/* Subscription Info Card - Required by Apple */}
+        {/* Plan Selection - show when not premium */}
+        {!isPremium && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-warning" />
+                Escolha seu plano
+              </CardTitle>
+              {neverHadTrial && (
+                <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 text-center mt-2">
+                  <Sparkles className="w-5 h-5 text-primary mx-auto mb-1" />
+                  <p className="text-sm font-semibold">Comece com 7 dias gratis!</p>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Plan Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Monthly */}
+                <button
+                  onClick={() => setSelectedPlan("monthly")}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                    selectedPlan === "monthly"
+                      ? "border-primary bg-primary/5"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <p className="text-xs text-muted-foreground font-medium">Mensal</p>
+                  <p className="text-2xl font-bold mt-1">{monthlyPrice}</p>
+                  <p className="text-xs text-muted-foreground">/mes</p>
+                </button>
+
+                {/* Annual */}
+                <button
+                  onClick={() => setSelectedPlan("annual")}
+                  className={`p-4 rounded-xl border-2 transition-all text-left relative ${
+                    selectedPlan === "annual"
+                      ? "border-primary bg-primary/5"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-success text-success-foreground text-[10px]">
+                    Mais popular
+                  </Badge>
+                  <p className="text-xs text-muted-foreground font-medium">Anual</p>
+                  <p className="text-2xl font-bold mt-1">R$ 9,90</p>
+                  <p className="text-xs text-muted-foreground">/mes</p>
+                  <Badge variant="outline" className="mt-2 text-[10px]">Economize 50%</Badge>
+                </button>
+              </div>
+
+              {/* Subscribe Buttons */}
+              <Button
+                onClick={() => handleSubscribe(selectedPlan)}
+                className="w-full"
+                size="lg"
+                disabled={isPurchasing || isIAPLoading || (!hasProducts && isNativePlatform)}
+              >
+                {isPurchasing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...</>
+                ) : isIAPLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Carregando planos...</>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4 mr-2" />
+                    {selectedPlan === "annual"
+                      ? `Assinar Anual — R$ 9,90/mes`
+                      : `Assinar Mensal — ${monthlyPrice}/mes`}
+                  </>
+                )}
+              </Button>
+
+              {/* Products not loaded */}
+              {!hasProducts && !isIAPLoading && isNativePlatform && !iapError && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Produtos nao carregados.</span>
+                  <Button variant="link" size="sm" className="p-0 h-auto" onClick={handleRetryLoad} disabled={isRetrying}>
+                    {isRetrying ? "Carregando..." : "Tentar novamente"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Subscription Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Cãolorias Premium</CardTitle>
-            <CardDescription>Informações da assinatura</CardDescription>
+            <CardTitle className="text-lg">Caolorias Premium</CardTitle>
+            <CardDescription>Todos os recursos inclusos</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Título:</span>
-                <span className="font-medium">Cãolorias Premium</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Duração:</span>
-                <span className="font-medium">Mensal (renovação automática)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Preço:</span>
-                <span className="font-medium">
-                  {products.find(p => p.id === "caolorias_premium_1month")?.price || "R$ 39,90"}/mês
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t space-y-2">
-              <p className="text-xs text-muted-foreground">
-                A assinatura será cobrada na sua conta do iTunes/Google Play. 
-                A renovação automática pode ser cancelada a qualquer momento nas configurações da sua conta.
-              </p>
-              
-              {/* Legal Links - Required by Apple Guideline 3.1.2 */}
-              <div className="flex flex-wrap gap-4 pt-2">
-                <Link 
-                  to="/termos" 
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  Termos de Uso
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-                <Link 
-                  to="/privacidade" 
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  Política de Privacidade
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
+          <CardContent>
+            <ul className="space-y-2">
+              {PREMIUM_FEATURES.map((feat) => (
+                <li key={feat} className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-success flex-shrink-0" />
+                  {feat}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
 
-        {/* Plan Comparison */}
+        {/* Legal */}
         <Card>
-          <CardHeader>
-            <CardTitle>Compare os Planos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Free */}
-              <div className={`p-4 rounded-lg border ${!isPremium ? "border-primary bg-primary/5" : ""}`}>
-                <h3 className="font-semibold mb-1">Grátis</h3>
-                <p className="text-2xl font-bold mb-4">R$ 0</p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    1 cão cadastrado
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    2 refeições por dia
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    7 dias de histórico
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Registro de peso básico
-                  </li>
-                </ul>
-              </div>
-
-              {/* Premium */}
-              <div className={`p-4 rounded-lg border-2 ${isPremium ? "border-primary bg-primary/5" : "border-warning"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Crown className="w-4 h-4 text-warning" />
-                  <h3 className="font-semibold">Premium</h3>
-                  {isPremium && <Badge variant="secondary" className="text-xs">Seu plano</Badge>}
-                </div>
-                <p className="text-2xl font-bold mb-1">
-                  {products.find(p => p.id === "caolorias_premium_1month")?.price || "R$ 39,90"}
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">/mês</p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Até 10 cães
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Refeições ilimitadas
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Histórico completo
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Plano alimentar com IA
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Receitas e favoritos
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Alertas avançados
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-success" />
-                    Exportar PDF
-                  </li>
-                </ul>
-              </div>
+          <CardContent className="p-4 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              A assinatura sera cobrada na sua conta do iTunes/Google Play.
+              A renovacao automatica pode ser cancelada a qualquer momento nas configuracoes da sua conta.
+            </p>
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Link to="/termos" className="text-xs text-primary hover:underline flex items-center gap-1">
+                Termos de Uso <ExternalLink className="w-3 h-3" />
+              </Link>
+              <Link to="/privacidade" className="text-xs text-primary hover:underline flex items-center gap-1">
+                Politica de Privacidade <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
           </CardContent>
         </Card>

@@ -18,6 +18,10 @@ export const PLAN_LIMITS = {
     has_activity_recommendations: false,
     has_pdf_export: false,
     has_multi_profile: false,
+    has_digestive_trends: false,
+    has_smart_shopping: false,
+    has_health_score: false,
+    has_food_comparator: false,
     allowed_objectives: ["alimentacao_saudavel"],
   },
   premium: {
@@ -33,6 +37,10 @@ export const PLAN_LIMITS = {
     has_activity_recommendations: true,
     has_pdf_export: true,
     has_multi_profile: true,
+    has_digestive_trends: true,
+    has_smart_shopping: true,
+    has_health_score: true,
+    has_food_comparator: true,
     allowed_objectives: ["alimentacao_saudavel", "manter_peso", "perder_peso", "ganhar_peso"],
   },
   trial: {
@@ -48,6 +56,10 @@ export const PLAN_LIMITS = {
     has_activity_recommendations: true,
     has_pdf_export: true,
     has_multi_profile: true,
+    has_digestive_trends: true,
+    has_smart_shopping: true,
+    has_health_score: true,
+    has_food_comparator: true,
     allowed_objectives: ["alimentacao_saudavel", "manter_peso", "perder_peso", "ganhar_peso"],
   },
 };

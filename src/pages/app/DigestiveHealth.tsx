@@ -13,17 +13,20 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { compressImage, formatFileSize } from "@/lib/imageCompression";
-import { 
-  Loader2, 
-  Plus, 
+import {
+  Loader2,
+  Plus,
   Trash2,
   AlertTriangle,
   CheckCircle2,
   Circle,
   Camera,
   Image as ImageIcon,
-  X
+  X,
+  TrendingUp
 } from "lucide-react";
+import { FeatureGateBlur } from "@/components/app/FeatureGate";
+import { DigestiveCharts } from "@/components/app/DigestiveCharts";
 import {
   Dialog,
   DialogContent,
@@ -555,6 +558,21 @@ export default function DigestiveHealth() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Premium Trends Section */}
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Tendencias
+          </h2>
+          <FeatureGateBlur feature="digestive_trends" overlayText="Desbloqueie graficos e tendencias digestivas">
+            <DigestiveCharts
+              poopLogs={poopLogs}
+              energyLogs={energyLogs}
+              symptoms={symptoms}
+            />
+          </FeatureGateBlur>
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="poop" className="w-full">

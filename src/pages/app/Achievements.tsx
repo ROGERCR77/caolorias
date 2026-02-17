@@ -3,14 +3,15 @@ import { AchievementCard } from "@/components/app/AchievementCard";
 import { StreakCard } from "@/components/app/StreakCard";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useData } from "@/contexts/DataContext";
-import { Loader2, Trophy, Star, Flame, Target } from "lucide-react";
+import { Loader2, Trophy, Star, Flame, Target, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const categoryLabels: Record<string, { label: string; icon: typeof Trophy }> = {
   general: { label: "Geral", icon: Star },
-  meals: { label: "Alimentação", icon: Target },
-  streak: { label: "Consistência", icon: Flame },
-  dogs: { label: "Cães", icon: Target },
+  meals: { label: "Alimentacao", icon: Target },
+  streak: { label: "Consistencia", icon: Flame },
+  dogs: { label: "Caes", icon: Target },
+  premium: { label: "Premium Exclusivo", icon: Crown },
 };
 
 export default function Achievements() {

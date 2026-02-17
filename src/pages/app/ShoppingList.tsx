@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { 
-  ShoppingCart, Share2, Copy, Loader2, RefreshCw, 
-  Apple, Beef, Wheat, Carrot, Package
+import {
+  ShoppingCart, Share2, Copy, Loader2, RefreshCw,
+  Apple, Beef, Wheat, Carrot, Package, DollarSign
 } from "lucide-react";
+import { FeatureGateBlur } from "@/components/app/FeatureGate";
 
 interface ShoppingItem {
   id: string;
@@ -354,6 +355,37 @@ export default function ShoppingList() {
               );
             })}
           </>
+        )}
+
+        {/* Premium: Cost Estimation */}
+        {items.length > 0 && (
+          <FeatureGateBlur feature="smart_shopping" overlayText="Desbloqueie estimativa de custo por item">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  Estimativa de Custo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {items.map((item) => {
+                  const food = foods.find(f => f.name.toLowerCase() === item.name.toLowerCase());
+                  const costLevel = food?.cost_level || "medio";
+                  const costLabel = costLevel === "alto" ? "$$$" : costLevel === "medio" ? "$$" : "$";
+                  const costColor = costLevel === "alto" ? "text-destructive" : costLevel === "medio" ? "text-warning" : "text-success";
+                  return (
+                    <div key={item.id} className="flex items-center justify-between text-sm">
+                      <span className="truncate flex-1">{item.name}</span>
+                      <span className={`font-bold ${costColor}`}>{costLabel}</span>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground pt-2">
+                  Baseado no nivel de custo dos alimentos na base de dados.
+                </p>
+              </CardContent>
+            </Card>
+          </FeatureGateBlur>
         )}
 
         {/* Empty State */}
