@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Stethoscope, Dog, Bell, LogOut, 
+import {
+  Stethoscope, Dog, Bell, LogOut,
   ChevronRight, Clock, CheckCircle, XCircle, Loader2, Copy, Check,
-  FileText, Calendar, LayoutDashboard
+  FileText, Calendar, LayoutDashboard, MessageSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VetStatsCard } from "@/components/vet/VetStatsCard";
 import { VetCalendar } from "@/components/vet/VetCalendar";
+import { VetAlertsCard } from "@/components/vet/VetAlertsCard";
+import { VetAnalyticsCard } from "@/components/vet/VetAnalyticsCard";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface VetProfile {
   id: string;
@@ -51,6 +54,7 @@ const VetDashboard = () => {
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [codeCopied, setCodeCopied] = useState(false);
+  const { unreadCount: unreadMessages } = useUnreadMessages(user?.id || "", "vet");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -209,14 +213,30 @@ const VetDashboard = () => {
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={signOut}
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/vet/mensagens">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20 relative"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={signOut}
+              >
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -240,6 +260,9 @@ const VetDashboard = () => {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6 mt-0">
+            {/* Health Alerts (priority) */}
+            <VetAlertsCard />
+
             {/* Vet Code Card */}
             <Card className="p-4 border-blue-500/20 bg-blue-500/5">
               <div className="flex items-center justify-between">
@@ -275,6 +298,9 @@ const VetDashboard = () => {
 
             {/* Stats */}
             <VetStatsCard />
+
+            {/* Analytics */}
+            <VetAnalyticsCard />
 
             {/* Pending Links */}
             {pendingLinks.length > 0 && (

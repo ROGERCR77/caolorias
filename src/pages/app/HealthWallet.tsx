@@ -44,6 +44,8 @@ interface HealthRecord {
   notes: string | null;
   photo_url: string | null;
   created_at: string;
+  source?: string;
+  vet_note_id?: string;
 }
 
 const RECORD_TYPES = [
@@ -93,7 +95,7 @@ export default function HealthWallet() {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('health_records')
-        .select('*')
+        .select('*, source, vet_note_id')
         .eq('dog_id', selectedDogId)
         .order('applied_at', { ascending: false });
 
@@ -460,8 +462,13 @@ export default function HealthWallet() {
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="secondary">{typeInfo?.label || record.type}</Badge>
+                          {record.source === 'vet' ? (
+                            <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">Vet</Badge>
+                          ) : (
+                            <Badge className="bg-green-500/10 text-green-600 border-green-200">Você</Badge>
+                          )}
                           <span className="font-semibold">{record.name}</span>
                         </div>
                         <p className="text-sm text-muted-foreground">

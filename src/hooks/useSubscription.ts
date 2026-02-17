@@ -22,6 +22,10 @@ export const PLAN_LIMITS = {
     has_smart_shopping: false,
     has_health_score: false,
     has_food_comparator: false,
+    has_prontuario: false,
+    has_vet_prescriptions: false,
+    has_vet_medications: false,
+    has_vet_treatment_plans: false,
     allowed_objectives: ["alimentacao_saudavel"],
   },
   premium: {
@@ -41,6 +45,10 @@ export const PLAN_LIMITS = {
     has_smart_shopping: true,
     has_health_score: true,
     has_food_comparator: true,
+    has_prontuario: true,
+    has_vet_prescriptions: true,
+    has_vet_medications: true,
+    has_vet_treatment_plans: true,
     allowed_objectives: ["alimentacao_saudavel", "manter_peso", "perder_peso", "ganhar_peso"],
   },
   trial: {
@@ -60,6 +68,10 @@ export const PLAN_LIMITS = {
     has_smart_shopping: true,
     has_health_score: true,
     has_food_comparator: true,
+    has_prontuario: true,
+    has_vet_prescriptions: true,
+    has_vet_medications: true,
+    has_vet_treatment_plans: true,
     allowed_objectives: ["alimentacao_saudavel", "manter_peso", "perder_peso", "ganhar_peso"],
   },
 };

@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, ChevronLeft, ChevronRight, Loader2, Syringe, Stethoscope, Microscope, MessageSquare } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Loader2, Syringe, Stethoscope, Microscope, MessageSquare, CalendarCheck, CheckCircle, XCircle } from "lucide-react";
+import { AppointmentResponseDialog } from "@/components/vet/AppointmentResponseDialog";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, isToday, isFuture, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -14,6 +15,11 @@ interface CalendarEvent {
   type: string;
   date: string;
   title: string;
+  isAppointment?: boolean;
+  appointmentStatus?: string;
+  appointmentReason?: string;
+  requestedBy?: string;
+  vetResponseNote?: string;
 }
 
 const NOTE_TYPE_CONFIG: Record<string, { icon: any; color: string; bgColor: string }> = {
@@ -21,6 +27,7 @@ const NOTE_TYPE_CONFIG: Record<string, { icon: any; color: string; bgColor: stri
   vacina: { icon: Syringe, color: "text-green-600", bgColor: "bg-green-500" },
   exame: { icon: Microscope, color: "text-purple-600", bgColor: "bg-purple-500" },
   observacao: { icon: MessageSquare, color: "text-amber-600", bgColor: "bg-amber-500" },
+  appointment: { icon: CalendarCheck, color: "text-violet-600", bgColor: "bg-violet-500" },
 };
 
 export const VetCalendar = () => {
@@ -29,6 +36,7 @@ export const VetCalendar = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -62,7 +70,7 @@ export const VetCalendar = () => {
           .not("scheduled_date", "is", null)
           .order("scheduled_date", { ascending: true });
 
-        const mappedEvents: CalendarEvent[] = (notes || []).map((note) => ({
+        const noteEvents: CalendarEvent[] = (notes || []).map((note) => ({
           id: note.id,
           dogName: linkDogMap.get(note.vet_dog_link_id) || "Paciente",
           type: note.note_type,
@@ -70,7 +78,26 @@ export const VetCalendar = () => {
           title: note.title,
         }));
 
-        setEvents(mappedEvents);
+        // Fetch appointments
+        const { data: appointments } = await supabase
+          .from("vet_appointments")
+          .select("id, vet_dog_link_id, requested_date, requested_time, reason, status, vet_response_note")
+          .in("vet_dog_link_id", linkIds)
+          .in("status", ["requested", "confirmed"]);
+
+        const appointmentEvents: CalendarEvent[] = (appointments || []).map((apt) => ({
+          id: apt.id,
+          dogName: linkDogMap.get(apt.vet_dog_link_id) || "Paciente",
+          type: "appointment",
+          date: apt.requested_date,
+          title: `${apt.requested_time ? apt.requested_time + " - " : ""}${apt.reason || "Consulta"}`,
+          isAppointment: true,
+          appointmentStatus: apt.status,
+          appointmentReason: apt.reason,
+          vetResponseNote: apt.vet_response_note,
+        }));
+
+        setEvents([...noteEvents, ...appointmentEvents]);
       } catch (error) {
         console.error("Error fetching calendar events:", error);
       } finally {
@@ -204,7 +231,7 @@ export const VetCalendar = () => {
                   <div
                     key={event.id}
                     className={`flex items-center gap-3 p-3 rounded-lg ${
-                      isPast ? "bg-muted/50 opacity-60" : "bg-muted"
+                      isPast ? "bg-muted/50 opacity-60" : event.isAppointment ? "bg-violet-50 dark:bg-violet-900/20" : "bg-muted"
                     }`}
                   >
                     <div className={`p-2 rounded-lg bg-background ${config.color}`}>
@@ -214,15 +241,53 @@ export const VetCalendar = () => {
                       <p className="font-medium text-sm">{event.dogName}</p>
                       <p className="text-xs text-muted-foreground truncate">{event.title}</p>
                     </div>
-                    <Badge variant={isPast ? "secondary" : "outline"} className="text-xs">
-                      {isPast ? "Passou" : "Agendado"}
-                    </Badge>
+                    {event.isAppointment && event.appointmentStatus === "requested" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => setSelectedAppointment(event)}
+                      >
+                        Responder
+                      </Button>
+                    ) : (
+                      <Badge variant={isPast ? "secondary" : "outline"} className={`text-xs ${
+                        event.isAppointment && event.appointmentStatus === "confirmed"
+                          ? "bg-green-500/10 text-green-600"
+                          : ""
+                      }`}>
+                        {event.isAppointment
+                          ? event.appointmentStatus === "confirmed" ? "Confirmado" : "Solicitado"
+                          : isPast ? "Passou" : "Agendado"}
+                      </Badge>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </Card>
+      )}
+
+      {/* Appointment Response Dialog */}
+      {selectedAppointment && (
+        <AppointmentResponseDialog
+          appointment={{
+            id: selectedAppointment.id,
+            requested_date: selectedAppointment.date,
+            reason: selectedAppointment.appointmentReason,
+            dogName: selectedAppointment.dogName,
+            tutorName: "",
+          }}
+          open={!!selectedAppointment}
+          onOpenChange={(open) => {
+            if (!open) setSelectedAppointment(null);
+          }}
+          onSaved={() => {
+            // Refresh events after response
+            setSelectedAppointment(null);
+          }}
+        />
       )}
     </div>
   );

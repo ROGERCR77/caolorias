@@ -8,6 +8,7 @@ import { WeeklyInsightsCard } from "@/components/app/WeeklyInsightsCard";
 import { StreakCard } from "@/components/app/StreakCard";
 import { VetAppointmentsCard } from "@/components/app/VetAppointmentsCard";
 import { HealthScoreCard } from "@/components/app/HealthScoreCard";
+import { VetProntuarioCard } from "@/components/app/VetProntuarioCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -257,6 +258,9 @@ const Dashboard = () => {
 
             {/* Vet Appointments Card */}
             <VetAppointmentsCard />
+
+            {/* Vet Prontuario Card */}
+            <VetProntuarioCard dogId={selectedDog.id} />
 
             {/* Goal progress */}
             {(selectedDog.meta_kcal_dia || selectedDog.meta_gramas_dia) && (

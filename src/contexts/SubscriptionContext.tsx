@@ -68,6 +68,10 @@ const PREMIUM_FEATURES = [
   "smart_shopping",
   "health_score",
   "food_comparator",
+  "prontuario",
+  "vet_prescriptions",
+  "vet_medications",
+  "vet_treatment_plans",
 ];
 
 const PRODUCT_IDS = {

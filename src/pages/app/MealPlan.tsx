@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { UpgradeModal } from "@/components/app/UpgradeModal";
 import { MealPlanWeekly } from "@/components/app/MealPlanWeekly";
+import { VetPrescriptionCard } from "@/components/app/VetPrescriptionCard";
 
 const objetivoLabels: Record<string, string> = {
   manter_peso: "Manter peso",
@@ -285,6 +286,9 @@ const MealPlan = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Vet Prescription Card */}
+        {selectedDog && <VetPrescriptionCard dogId={selectedDog.id} />}
 
         {selectedDog && (
           <div className="space-y-4">

@@ -12,11 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  ArrowLeft, Dog, Plus, Syringe, FileText, 
+  ArrowLeft, Dog, Plus, Syringe, FileText,
   Microscope, MessageSquare, Calendar, Loader2, Stethoscope,
-  ChartBar, Scale, Utensils, Activity, Heart, Camera, X, Image as ImageIcon
+  ChartBar, Scale, Utensils, Activity, Heart, Camera, X, Image as ImageIcon,
+  ClipboardList
 } from "lucide-react";
 import { HealthHistoryTab } from "@/components/vet/HealthHistoryTab";
+import { PrescriptionForm } from "@/components/vet/PrescriptionForm";
+import { MedicationForm } from "@/components/vet/MedicationForm";
+import { TreatmentPlanForm } from "@/components/vet/TreatmentPlanForm";
+import { ReportCommentForm } from "@/components/vet/ReportCommentForm";
 
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -95,6 +100,10 @@ const VetDogProfile = () => {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedReport, setExpandedReport] = useState<string | null>(null);
+  const [prescriptionOpen, setPrescriptionOpen] = useState(false);
+  const [medicationOpen, setMedicationOpen] = useState(false);
+  const [treatmentOpen, setTreatmentOpen] = useState(false);
+  const [commentReportId, setCommentReportId] = useState<string | null>(null);
 
   // New note form
   const [newNoteType, setNewNoteType] = useState<NoteType>("consulta");
@@ -331,6 +340,36 @@ const VetDogProfile = () => {
         }
       }
 
+      // Auto-create health_record for tutor's Carteira de Saude
+      if (data && linkData) {
+        try {
+          if (newNoteType === "vacina") {
+            await supabase.from("health_records").insert({
+              dog_id: linkData.dog_id,
+              user_id: linkData.tutor_user_id,
+              source: "vet",
+              vet_note_id: data.id,
+              type: "vacina",
+              name: newNoteTitle.trim(),
+              applied_at: format(new Date(), "yyyy-MM-dd"),
+              next_due_at: newNoteScheduledDate || null,
+            });
+          } else if (newNoteType === "exame") {
+            await supabase.from("health_records").insert({
+              dog_id: linkData.dog_id,
+              user_id: linkData.tutor_user_id,
+              source: "vet",
+              vet_note_id: data.id,
+              type: "outro",
+              name: newNoteTitle.trim(),
+              applied_at: format(new Date(), "yyyy-MM-dd"),
+            });
+          }
+        } catch (hrError) {
+          console.log("Health record auto-creation failed (non-blocking):", hrError);
+        }
+      }
+
       setNotes(prev => [data as VetNote, ...prev]);
       setDialogOpen(false);
       resetForm();
@@ -534,6 +573,64 @@ const VetDogProfile = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Vet Tools */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => setPrescriptionOpen(true)}
+          >
+            <ClipboardList className="w-3.5 h-3.5 text-orange-500" />
+            Dieta
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => setMedicationOpen(true)}
+          >
+            <Plus className="w-3.5 h-3.5 text-pink-500" />
+            Medicamento
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => setTreatmentOpen(true)}
+          >
+            <FileText className="w-3.5 h-3.5 text-indigo-500" />
+            Tratamento
+          </Button>
+        </div>
+
+        {/* Vet Tool Dialogs */}
+        {link && (
+          <>
+            <PrescriptionForm
+              linkId={link.id}
+              vetUserId={user!.id}
+              dogName={dog.name}
+              open={prescriptionOpen}
+              onOpenChange={setPrescriptionOpen}
+            />
+            <MedicationForm
+              linkId={link.id}
+              vetUserId={user!.id}
+              dogName={dog.name}
+              open={medicationOpen}
+              onOpenChange={setMedicationOpen}
+            />
+            <TreatmentPlanForm
+              linkId={link.id}
+              vetUserId={user!.id}
+              dogName={dog.name}
+              open={treatmentOpen}
+              onOpenChange={setTreatmentOpen}
+            />
+          </>
+        )}
+
         {/* Notes Tabs */}
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="w-full grid grid-cols-7">
@@ -679,6 +776,20 @@ const VetDogProfile = () => {
                               </div>
                             </div>
                           )}
+
+                          {/* Comment button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-2 gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCommentReportId(report.id);
+                            }}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            Comentar relatório
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -702,6 +813,17 @@ const VetDogProfile = () => {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Report Comment Dialog */}
+        {commentReportId && (
+          <ReportCommentForm
+            reportId={commentReportId}
+            vetUserId={user!.id}
+            dogName={dog.name}
+            open={!!commentReportId}
+            onOpenChange={(open) => { if (!open) setCommentReportId(null); }}
+          />
+        )}
       </main>
     </div>
   );

@@ -49,9 +49,14 @@ const ShoppingList = lazy(() => import("./pages/app/ShoppingList"));
 const FoodComparator = lazy(() => import("./pages/app/FoodComparator"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// New app pages (WS2+WS3)
+const Prontuario = lazy(() => import("./pages/app/Prontuario"));
+const Mensagens = lazy(() => import("./pages/app/Mensagens"));
+
 // Vet pages
 const VetDashboard = lazy(() => import("./pages/vet/VetDashboard"));
 const VetDogProfile = lazy(() => import("./pages/vet/VetDogProfile"));
+const VetMensagens = lazy(() => import("./pages/vet/VetMensagens"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,6 +143,7 @@ const App = () => {
                       {/* Vet routes */}
                       <Route path="/vet/dashboard" element={<ProtectedVetRoute><VetDashboard /></ProtectedVetRoute>} />
                       <Route path="/vet/dog/:dogId" element={<ProtectedVetRoute><VetDogProfile /></ProtectedVetRoute>} />
+                      <Route path="/vet/mensagens" element={<ProtectedVetRoute><VetMensagens /></ProtectedVetRoute>} />
 
                       {/* Protected app routes */}
                       <Route path="/app/hoje" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -163,6 +169,8 @@ const App = () => {
                       <Route path="/app/conquistas" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
                       <Route path="/app/lista-compras" element={<ProtectedRoute><ShoppingList /></ProtectedRoute>} />
                       <Route path="/app/comparador" element={<ProtectedRoute><FoodComparator /></ProtectedRoute>} />
+                      <Route path="/app/prontuario" element={<ProtectedRoute><Prontuario /></ProtectedRoute>} />
+                      <Route path="/app/mensagens" element={<ProtectedRoute><Mensagens /></ProtectedRoute>} />
 
                       {/* Redirect /app to /app/hoje */}
                       <Route path="/app" element={<Navigate to="/app/hoje" replace />} />

@@ -69,6 +69,8 @@ export default function VetReport() {
   const [healthData, setHealthData] = useState<any>(null);
   const [vetNotes, setVetNotes] = useState<VetNote[]>([]);
   const [linkedVets, setLinkedVets] = useState<LinkedVet[]>([]);
+  const [reportPeriod, setReportPeriod] = useState(30);
+  const [reportComments, setReportComments] = useState<Record<string, any[]>>({});
   const reportRef = useRef<HTMLDivElement>(null);
 
   const selectedDog = dogs.find(d => d.id === selectedDogId);
@@ -103,7 +105,7 @@ export default function VetReport() {
         // Fetch notes for this specific dog - more efficient query
         // Get link IDs for this dog first
         const linkIds = links?.map(l => l.id) || [];
-        
+
         if (linkIds.length > 0) {
           const { data: notes } = await supabase
             .from("vet_notes")
@@ -137,6 +139,43 @@ export default function VetReport() {
         } else {
           setVetNotes([]);
         }
+
+        // Fetch report comments
+        const { data: reports } = await supabase
+          .from("tutor_health_reports")
+          .select("id")
+          .eq("dog_id", selectedDogId)
+          .eq("tutor_user_id", user.id);
+
+        if (reports && reports.length > 0) {
+          const reportIds = reports.map(r => r.id);
+          const { data: comments } = await supabase
+            .from("vet_report_comments")
+            .select(`
+              id,
+              report_id,
+              content,
+              created_at,
+              vet_profile:vet_profiles!vet_report_comments_vet_profile_fkey(
+                name, crmv, uf
+              )
+            `)
+            .in("report_id", reportIds)
+            .order("created_at", { ascending: false });
+
+          if (comments) {
+            const grouped: Record<string, any[]> = {};
+            comments.forEach((c: any) => {
+              const vetProfile = Array.isArray(c.vet_profile) ? c.vet_profile[0] : c.vet_profile;
+              if (!grouped[c.report_id]) grouped[c.report_id] = [];
+              grouped[c.report_id].push({
+                ...c,
+                vet_profile: vetProfile,
+              });
+            });
+            setReportComments(grouped);
+          }
+        }
       } catch (error) {
         console.error("Error fetching vet data:", error);
       }
@@ -166,14 +205,15 @@ export default function VetReport() {
     
     setIsLoading(true);
     try {
-      const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+      const periodStart = subDays(new Date(), reportPeriod).toISOString();
       
-      const [symptomsRes, poopRes, energyRes, activityRes, intolerancesRes] = await Promise.all([
-        supabase.from('health_symptoms').select('*').eq('dog_id', selectedDogId).gte('logged_at', thirtyDaysAgo),
-        supabase.from('poop_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', thirtyDaysAgo),
-        supabase.from('energy_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', thirtyDaysAgo),
-        supabase.from('activity_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', thirtyDaysAgo),
+      const [symptomsRes, poopRes, energyRes, activityRes, intolerancesRes, healthRecordsRes] = await Promise.all([
+        supabase.from('health_symptoms').select('*').eq('dog_id', selectedDogId).gte('logged_at', periodStart),
+        supabase.from('poop_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', periodStart),
+        supabase.from('energy_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', periodStart),
+        supabase.from('activity_logs').select('*').eq('dog_id', selectedDogId).gte('logged_at', periodStart),
         supabase.from('food_intolerances').select('*').eq('dog_id', selectedDogId),
+        supabase.from('health_records').select('*').eq('dog_id', selectedDogId).order('applied_at', { ascending: false }),
       ]);
 
       setHealthData({
@@ -182,6 +222,7 @@ export default function VetReport() {
         energyLogs: energyRes.data || [],
         activityLogs: activityRes.data || [],
         intolerances: intolerancesRes.data || [],
+        healthRecords: healthRecordsRes.data || [],
       });
 
       // Salvar relatório no banco para o veterinário acessar
@@ -556,6 +597,22 @@ export default function VetReport() {
           </Card>
         )}
 
+        {/* Period Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Período:</span>
+          <select
+            value={reportPeriod}
+            onChange={(e) => setReportPeriod(Number(e.target.value))}
+            className="text-sm border rounded-lg px-3 py-1.5 bg-background"
+          >
+            <option value={7}>7 dias</option>
+            <option value={14}>14 dias</option>
+            <option value={30}>30 dias</option>
+            <option value={60}>60 dias</option>
+            <option value={90}>90 dias</option>
+          </select>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2">
           <Button 
@@ -662,6 +719,47 @@ export default function VetReport() {
             </Card>
           )}
 
+          {/* Vet Report Comments */}
+          {Object.keys(reportComments).length > 0 && (
+            <Card className="border-blue-500/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-blue-500" />
+                  Comentários do Veterinário
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {Object.values(reportComments).flat().slice(0, 10).map((comment: any) => {
+                  const isRecent = new Date().getTime() - new Date(comment.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+                  return (
+                    <div key={comment.id} className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Stethoscope className="h-3 w-3 text-blue-500" />
+                        <span className="text-xs font-medium text-blue-600">
+                          Dr(a). {comment.vet_profile?.name}
+                        </span>
+                        {comment.vet_profile?.crmv && (
+                          <span className="text-xs text-muted-foreground">
+                            CRMV {comment.vet_profile.crmv}/{comment.vet_profile.uf}
+                          </span>
+                        )}
+                        {isRecent && (
+                          <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-600">
+                            Novo
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm">{comment.content}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(parseISO(comment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Weight History */}
           <Card>
             <CardHeader className="pb-2">
@@ -721,6 +819,40 @@ export default function VetReport() {
           {/* Health Data (if loaded) */}
           {healthData && (
             <>
+              {/* Health Records (Vaccines, Dewormers) */}
+              {healthData.healthRecords && healthData.healthRecords.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Syringe className="h-4 w-4 text-green-500" />
+                      Carteira de Saúde
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {healthData.healthRecords.slice(0, 8).map((r: any) => (
+                        <div key={r.id} className="flex justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {r.type}
+                            </Badge>
+                            <span>{r.name}</span>
+                            {r.source === "vet" && (
+                              <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-600">
+                                Vet
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-muted-foreground">
+                            {r.applied_at ? format(parseISO(r.applied_at), "dd/MM/yyyy") : "-"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Intolerances */}
               {healthData.intolerances.length > 0 && (
                 <Card>

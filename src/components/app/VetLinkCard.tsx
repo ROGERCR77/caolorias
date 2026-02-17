@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
-import { Plus, Stethoscope, X, Search, Loader2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Stethoscope, X, Search, Loader2, Clock, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { AppointmentRequestDialog } from "@/components/app/AppointmentRequestDialog";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,13 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  const [appointmentLinkId, setAppointmentLinkId] = useState<string | null>(null);
+  const [historyShareDialogOpen, setHistoryShareDialogOpen] = useState(false);
+  const [newlyLinkedVet, setNewlyLinkedVet] = useState<VetProfile | null>(null);
+  const [previousVetsForShare, setPreviousVetsForShare] = useState<VetLink[]>([]);
+  const [selectedVetsToShare, setSelectedVetsToShare] = useState<string[]>([]);
+  const [isSharingHistory, setIsSharingHistory] = useState(false);
+
   // Search
   const [vetCode, setVetCode] = useState("");
   const [searchResult, setSearchResult] = useState<VetProfile | null>(null);
@@ -190,6 +198,14 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
         description: `Aguarde ${searchResult.name} aceitar o vínculo.`,
       });
 
+      // Check if there are other active vets to offer history sharing
+      const activeVets = vetLinks.filter(l => l.status === "active" && l.vet_user_id !== searchResult.user_id);
+      if (activeVets.length > 0) {
+        setNewlyLinkedVet(searchResult);
+        setPreviousVetsForShare(activeVets);
+        setHistoryShareDialogOpen(true);
+      }
+
       setDialogOpen(false);
       resetForm();
     } catch (error) {
@@ -214,6 +230,38 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
     } catch (error) {
       console.error("Error unlinking vet:", error);
       toast.error("Erro ao remover vínculo");
+    }
+  };
+
+  const shareHistory = async () => {
+    if (!user || !newlyLinkedVet || selectedVetsToShare.length === 0) return;
+    setIsSharingHistory(true);
+    try {
+      const inserts = selectedVetsToShare.map(sourceVetUserId => ({
+        tutor_user_id: user.id,
+        dog_id: dogId,
+        source_vet_user_id: sourceVetUserId,
+        target_vet_user_id: newlyLinkedVet.user_id,
+      }));
+
+      const { error } = await supabase
+        .from("vet_history_shares")
+        .insert(inserts);
+
+      if (error) throw error;
+
+      toast.success("Histórico compartilhado!", {
+        description: `O novo veterinário poderá ver as anotações dos veterinários anteriores.`,
+      });
+    } catch (error) {
+      console.error("Error sharing history:", error);
+      toast.error("Erro ao compartilhar histórico");
+    } finally {
+      setIsSharingHistory(false);
+      setHistoryShareDialogOpen(false);
+      setNewlyLinkedVet(null);
+      setPreviousVetsForShare([]);
+      setSelectedVetsToShare([]);
     }
   };
 
@@ -338,11 +386,21 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Badge variant="secondary" className={`gap-1 ${statusInfo.color}`}>
                       {statusInfo.icon}
                       {statusInfo.label}
                     </Badge>
+                    {link.status === "active" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-blue-500"
+                        onClick={() => setAppointmentLinkId(link.id)}
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -358,6 +416,90 @@ export function VetLinkCard({ dogId }: VetLinkCardProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Appointment Request Dialog */}
+      {appointmentLinkId && (
+        <AppointmentRequestDialog
+          linkId={appointmentLinkId}
+          open={!!appointmentLinkId}
+          onOpenChange={(open) => {
+            if (!open) setAppointmentLinkId(null);
+          }}
+        />
+      )}
+
+      {/* History Sharing Dialog */}
+      <Dialog open={historyShareDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setHistoryShareDialogOpen(false);
+          setNewlyLinkedVet(null);
+          setPreviousVetsForShare([]);
+          setSelectedVetsToShare([]);
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Compartilhar Histórico</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Deseja compartilhar o histórico de anotações dos seus veterinários anteriores com{" "}
+              <strong>{newlyLinkedVet?.name}</strong>?
+            </p>
+            <div className="space-y-2">
+              {previousVetsForShare.map(link => (
+                <label
+                  key={link.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedVetsToShare.includes(link.vet_user_id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedVetsToShare(prev => [...prev, link.vet_user_id]);
+                      } else {
+                        setSelectedVetsToShare(prev => prev.filter(id => id !== link.vet_user_id));
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{link.vet_profile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      CRMV {link.vet_profile.crmv}/{link.vet_profile.uf}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setHistoryShareDialogOpen(false);
+                  setNewlyLinkedVet(null);
+                  setPreviousVetsForShare([]);
+                  setSelectedVetsToShare([]);
+                }}
+              >
+                Pular
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={shareHistory}
+                disabled={selectedVetsToShare.length === 0 || isSharingHistory}
+              >
+                {isSharingHistory ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Compartilhar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
