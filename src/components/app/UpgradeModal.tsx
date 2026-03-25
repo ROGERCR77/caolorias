@@ -38,6 +38,8 @@ const FEATURE_NAMES: Record<string, string> = {
   smart_shopping: "Lista Inteligente",
   health_score: "Score de Saude",
   food_comparator: "Comparador de Alimentos",
+  unlimited_meals: "Refeicoes ilimitadas",
+  full_history: "Historico completo",
 };
 
 const PREMIUM_FEATURES_LIST = [

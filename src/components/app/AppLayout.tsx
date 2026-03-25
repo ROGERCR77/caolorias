@@ -82,7 +82,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isMoreActive = moreNavItems.some(item => location.pathname === item.path);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       {/* Top Header - Modern iOS Style */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-xl border-b border-border/30 shadow-sm">
         <div 

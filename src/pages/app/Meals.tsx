@@ -12,9 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useData, Food } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell } from "lucide-react";
+import { Plus, Trash2, UtensilsCrossed, X, Dog, Loader2, Info, Bell, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, isToday, isThisWeek, isThisMonth } from "date-fns";
+import { usePlanLimits } from "@/hooks/useSubscription";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { UpgradeModal } from "@/components/app/UpgradeModal";
+import { format, parseISO, isToday, isThisWeek, isThisMonth, subDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FoodSearchCombobox, FoodReferenceWithMacros } from "@/components/app/FoodSearchCombobox";
 import { formatFoodShort } from "@/lib/formatFoodDisplay";
@@ -66,6 +69,11 @@ const Meals = () => {
   const { user } = useAuth();
   const { dogs, foods, meals, selectedDogId, setSelectedDogId, addMeal, deleteMeal, addFood, isLoading: dataLoading } = useData();
   const { toast } = useToast();
+  const { isPremium } = useSubscription();
+  const planLimits = usePlanLimits();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<string>("unlimited_meals");
+  const [upgradeMessage, setUpgradeMessage] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +91,12 @@ const Meals = () => {
   });
 
   const selectedDog = dogs.find((d) => d.id === selectedDogId);
+
+  // Count today's meals for the selected dog (for free plan limit)
+  const todaysMealCount = meals.filter(
+    (m) => m.dog_id === selectedDogId && isToday(parseISO(m.date_time))
+  ).length;
+  const mealLimitReached = todaysMealCount >= planLimits.max_meals_per_day;
 
   // Form state
   const [formData, setFormData] = useState<{
@@ -438,12 +452,21 @@ const Meals = () => {
     }
   };
 
+  // History cutoff for free plan
+  const historyCutoff = planLimits.max_history_days !== Infinity
+    ? subDays(new Date(), planLimits.max_history_days)
+    : null;
+
   // Filter meals
   const filteredMeals = meals
     .filter((meal) => {
       if (selectedDogId && meal.dog_id !== selectedDogId) return false;
-      
+
       const date = parseISO(meal.date_time);
+
+      // Enforce history limit for free plan
+      if (historyCutoff && !isAfter(date, historyCutoff)) return false;
+
       switch (filterPeriod) {
         case "today":
           return isToday(date);
@@ -519,9 +542,21 @@ const Meals = () => {
         <div className="flex flex-col gap-items">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Refeições</h1>
-            <Button onClick={openNewMealDialog} variant="accent">
+            <Button
+              onClick={() => {
+                if (mealLimitReached) {
+                  setUpgradeFeature("unlimited_meals");
+                  setUpgradeMessage(`Voce ja registrou ${todaysMealCount} refeicoes hoje. No plano Free o limite e ${planLimits.max_meals_per_day} por dia.`);
+                  setShowUpgrade(true);
+                } else {
+                  openNewMealDialog();
+                }
+              }}
+              variant="accent"
+            >
               <Plus className="w-4 h-4" />
               Nova refeição
+              {mealLimitReached && <Crown className="w-3 h-3 ml-1 text-warning" />}
             </Button>
           </div>
 
@@ -534,11 +569,35 @@ const Meals = () => {
               <SelectContent className="bg-card">
                 <SelectItem value="today">Hoje</SelectItem>
                 <SelectItem value="week">Esta semana</SelectItem>
-                <SelectItem value="month">Este mês</SelectItem>
-                <SelectItem value="all">Todas</SelectItem>
+                {isPremium ? (
+                  <>
+                    <SelectItem value="month">Este mês</SelectItem>
+                    <SelectItem value="all">Todas</SelectItem>
+                  </>
+                ) : (
+                  <SelectItem value="month" disabled>
+                    <span className="flex items-center gap-1">Este mês <Crown className="w-3 h-3 text-warning" /></span>
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Free plan history banner */}
+          {!isPremium && (
+            <button
+              onClick={() => {
+                setUpgradeFeature("full_history");
+                setUpgradeMessage("No plano Free, o historico e limitado a 7 dias. Assine Premium para acessar todo o historico.");
+                setShowUpgrade(true);
+              }}
+              className="flex items-center gap-2 p-2.5 rounded-lg bg-warning/10 border border-warning/20 text-sm w-full text-left hover:bg-warning/15 transition-colors"
+            >
+              <Crown className="w-4 h-4 text-warning flex-shrink-0" />
+              <span className="text-muted-foreground">Historico limitado a 7 dias.</span>
+              <span className="text-primary font-medium ml-auto flex-shrink-0">Ver Premium</span>
+            </button>
+          )}
         </div>
 
         {filteredMeals.length === 0 ? (
@@ -789,6 +848,14 @@ const Meals = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          open={showUpgrade}
+          onOpenChange={setShowUpgrade}
+          feature={upgradeFeature}
+          contextMessage={upgradeMessage}
+        />
 
         {/* Custom Food Creation Dialog */}
         <Dialog open={isCreatingCustomFood} onOpenChange={setIsCreatingCustomFood}>

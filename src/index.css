@@ -150,6 +150,7 @@
     -webkit-touch-callout: none;
     /* Use dynamic viewport height for iOS Safari */
     height: -webkit-fill-available;
+    overflow-x: hidden;
   }
 
   body {
@@ -161,6 +162,7 @@
     /* Ensure body fills available space */
     min-height: 100dvh;
     min-height: -webkit-fill-available;
+    overflow-x: hidden;
   }
 
   /* Prevent zoom on input focus in iOS */
